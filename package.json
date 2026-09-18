@@ -1,0 +1,27 @@
+{
+    "name": "scoop-shepherd",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "test": "bun test",
+        "lint": "eslint .",
+        "format": "prettier --write .",
+        "typecheck": "tsc --noEmit",
+        "validate": "bash scripts/validate.sh",
+        "prepare": "husky"
+    },
+    "devDependencies": {
+        "@commitlint/cli": "^21.2.2",
+        "@commitlint/config-conventional": "^21.2.2",
+        "@eslint/js": "^10.0.1",
+        "eslint": "^10.10.0",
+        "husky": "^9.1.7",
+        "lint-staged": "^17.5.1",
+        "prettier": "^3.4.2",
+        "typescript": "^7.0.2"
+    },
+    "lint-staged": {
+        "*.{js,json,md}": "prettier --write"
+    }
+}

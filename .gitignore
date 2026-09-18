@@ -1,0 +1,14 @@
+node_modules/
+.validate/
+preview-work/
+
+# Never ship standing agent instructions into someone else's desktop config:
+# every tracked file in this repo is cloned onto the machine of anyone who
+# installs the plugin.
+CLAUDE.md
+AGENTS.md
+GEMINI.md
+.claude/
+.agents/
+.codex/
+.superpowers/

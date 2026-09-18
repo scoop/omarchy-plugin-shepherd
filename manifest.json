@@ -1,0 +1,53 @@
+{
+    "schemaVersion": 1,
+    "id": "scoop.shepherd",
+    "name": "Shepherd",
+    "version": "0.1.0",
+    "author": "scoop",
+    "description": "How many Shepherd sessions are waiting on you. The bar stays empty until one is.",
+    "license": "MIT",
+    "kinds": ["service", "bar-widget", "overlay"],
+    "keepLoaded": true,
+    "entryPoints": {
+        "service": "Service.qml",
+        "barWidget": "Indicator.qml",
+        "overlay": "Card.qml"
+    },
+    "barWidget": {
+        "displayName": "Shepherd",
+        "description": "Coding-agent sessions that need you, from a Shepherd instance",
+        "category": "Status",
+        "allowMultiple": false,
+        "defaultSection": "right",
+        "defaults": {
+            "baseUrl": "",
+            "allowPlaintextFor": "",
+            "pollIntervalSec": 30
+        },
+        "schema": [
+            {
+                "key": "baseUrl",
+                "type": "string",
+                "label": "Shepherd address",
+                "defaultValue": "",
+                "description": "Base URL of the Shepherd instance, e.g. https://shepherd.your-tailnet.ts.net"
+            },
+            {
+                "key": "allowPlaintextFor",
+                "type": "string",
+                "label": "Allow plaintext HTTP for",
+                "defaultValue": "",
+                "description": "The exact http:// address plaintext is permitted for. Anything else is refused; changing the address withdraws consent."
+            },
+            {
+                "key": "pollIntervalSec",
+                "type": "integer",
+                "label": "Poll interval (seconds)",
+                "min": 15,
+                "max": 600,
+                "step": 15,
+                "defaultValue": 30
+            }
+        ]
+    }
+}

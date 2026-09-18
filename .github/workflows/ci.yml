@@ -1,0 +1,32 @@
+name: CI
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+
+jobs:
+    check:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v5
+            - uses: oven-sh/setup-bun@v2
+              with:
+                  bun-version: latest
+
+            # Frozen on main only: a Dependabot PR updates package.json before the
+            # lockfile, and rejecting it for that is rejecting the update.
+            - name: Install
+              run: bun install ${{ github.ref == 'refs/heads/main' && '--frozen-lockfile' || '' }}
+
+            - run: bun run lint
+            - run: bun run typecheck
+            - run: bunx prettier --check .
+            - run: bun test
+
+            # The helper scripts are half the security surface of this plugin and
+            # none of it is covered by eslint.
+            - name: Shellcheck
+              run: |
+                  sudo apt-get update && sudo apt-get install -y shellcheck
+                  shellcheck --severity=warning bin/*.sh scripts/*.sh

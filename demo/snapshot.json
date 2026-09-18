@@ -1,0 +1,72 @@
+{
+    "_comment": "Canned data for screenshots and for working on the card without three agents conveniently stuck. Loaded by `omarchy-shell scoop.shepherd.service demo`; `refresh` returns to the live view.",
+    "sessions": [
+        {
+            "id": "8f3adc99-1a2b-4c3d-9e8f-000000000001",
+            "desig": "TASK-418",
+            "name": "Rework the merge train backoff",
+            "repoPath": "/home/you/Work/shepherd",
+            "status": "blocked",
+            "createdAt": 1758180000000
+        },
+        {
+            "id": "8f3adc99-1a2b-4c3d-9e8f-000000000002",
+            "desig": "TASK-421",
+            "name": "Locale catalogue parity check",
+            "repoPath": "/home/you/Work/shepherd",
+            "status": "idle",
+            "createdAt": 1758183600000
+        },
+        {
+            "id": "8f3adc99-1a2b-4c3d-9e8f-000000000003",
+            "desig": "TASK-425",
+            "name": "Drop the legacy preview port",
+            "repoPath": "/home/you/Work/dashy",
+            "status": "running",
+            "createdAt": 1758187200000
+        },
+        {
+            "id": "8f3adc99-1a2b-4c3d-9e8f-000000000004",
+            "desig": "TASK-427",
+            "name": "Bump the forge client",
+            "repoPath": "/home/you/Work/dashy",
+            "status": "running",
+            "createdAt": 1758190800000
+        },
+        {
+            "id": "8f3adc99-1a2b-4c3d-9e8f-000000000005",
+            "desig": "TASK-430",
+            "name": "Split the readiness scorer",
+            "repoPath": "/home/you/Work/pitwall",
+            "status": "running",
+            "createdAt": 1758194400000
+        },
+        {
+            "id": "8f3adc99-1a2b-4c3d-9e8f-000000000006",
+            "desig": "TASK-431",
+            "name": "Retire the old recap format",
+            "repoPath": "/home/you/Work/pitwall",
+            "status": "running",
+            "createdAt": 1758198000000
+        }
+    ],
+    "holds": {
+        "8f3adc99-1a2b-4c3d-9e8f-000000000001": { "code": "blocked-yes-no" },
+        "8f3adc99-1a2b-4c3d-9e8f-000000000002": {
+            "code": "autopilot-paused",
+            "params": {
+                "question": "The migration drops a column that still has readers. Proceed?"
+            }
+        },
+        "8f3adc99-1a2b-4c3d-9e8f-000000000003": { "code": "ready-merge", "params": { "pr": 412 } },
+        "8f3adc99-1a2b-4c3d-9e8f-000000000004": {
+            "code": "critic-rework",
+            "params": { "findings": 3 }
+        },
+        "8f3adc99-1a2b-4c3d-9e8f-000000000005": { "code": "ci-red", "params": { "pr": 419 } },
+        "8f3adc99-1a2b-4c3d-9e8f-000000000006": {
+            "code": "halted-usage",
+            "params": { "resetAt": 1758214800000 }
+        }
+    }
+}
