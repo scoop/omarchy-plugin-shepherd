@@ -252,7 +252,7 @@ Item {
                             id: tokenField
                             width: parent.width
                             visible: !(root.service && root.service.plaintextRefused)
-                            echoMode: TextInput.Password
+                            password: true
                             placeholderText: "Access token"
                             onAccepted: root.storeToken()
                         }
@@ -269,9 +269,10 @@ Item {
                             text: ""
                         }
 
-                        PanelActionButton {
+                        Button {
                             visible: !(root.service && root.service.plaintextRefused)
                             text: "Sign in"
+                            bordered: true
                             onClicked: root.storeToken()
                         }
                     }
