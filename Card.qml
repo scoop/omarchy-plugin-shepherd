@@ -87,18 +87,93 @@ Item {
         return h < 24 ? h + "h" : Math.floor(h / 24) + "d";
     }
 
+    /**
+     * Which program opens a URL on this machine, or "" if none is installed.
+     *
+     * Absolute paths, tried in order, never PATH — another process can prepend
+     * to that. Empty is a state the card says out loud, because
+     * Quickshell.execDetached reports nothing at all: a missing opener and a
+     * successful one look identical from here, which is how a click ends up
+     * doing nothing with no way to find out why.
+     */
+    readonly property string opener: {
+        if (openerFound["/usr/bin/xdg-open"] === true) {
+            return "/usr/bin/xdg-open";
+        }
+        if (openerFound["/usr/bin/gio"] === true) {
+            return "/usr/bin/gio";
+        }
+        return "";
+    }
+
+    /** Which candidate openers exist, as answered by test -x. */
+    property var openerFound: ({})
+
+    /** What the card says when a row could not be acted on. */
+    property string openNote: ""
+
     /** Open Shepherd's own view of one session, in the browser. */
     function openSession(row) {
         if (!service || !service.parsedUrl || !service.parsedUrl.ok || !row) {
             return;
         }
+        if (opener === "") {
+            // Deliberately does not close: a card that vanishes having done
+            // nothing is the failure an operator cannot debug.
+            openNote = "Could not open it — no xdg-open or gio on this machine.";
+            return;
+        }
+        var url = service.parsedUrl.url + "/?session=" + encodeURIComponent(row.id);
+        // Scheme and host only. The session id is not something to leave in a
+        // log other processes can read.
+        console.log("scoop.shepherd: opening " + service.parsedUrl.url + " with " + opener);
         // argv, not a shell string: the id comes from Shepherd and the URL from
         // settings, and neither gets to be reinterpreted by a shell on the way.
-        // "--" so a URL that somehow began with a dash is still a URL to
-        // xdg-open and not an option to it.
-        Quickshell.execDetached(["/usr/bin/xdg-open", "--", service.parsedUrl.url + "/?session=" + encodeURIComponent(row.id)]);
+        // "--" so a URL that somehow began with a dash stays a URL and does not
+        // become an option. gio wants its verb first and takes no "--".
+        if (opener === "/usr/bin/gio") {
+            Quickshell.execDetached([opener, "open", url]);
+        } else {
+            Quickshell.execDetached([opener, "--", url]);
+        }
+        openNote = "";
         close();
     }
+
+    /** Record what test -x said about one candidate. */
+    function noteOpener(path, exists) {
+        var next = {};
+        for (var k in openerFound) {
+            next[k] = openerFound[k];
+        }
+        next[path] = exists;
+        openerFound = next;
+    }
+
+    BoundedProcess {
+        id: xdgScan
+        program: ["/usr/bin/test", "-x", "/usr/bin/xdg-open"]
+        deadlineSeconds: 5
+        maxBytes: 1024
+        onFinishedWith: function (text, code, tooLarge) {
+            root.noteOpener("/usr/bin/xdg-open", code === 0);
+            if (code !== 0) {
+                gioScan.running = true;
+            }
+        }
+    }
+
+    BoundedProcess {
+        id: gioScan
+        program: ["/usr/bin/test", "-x", "/usr/bin/gio"]
+        deadlineSeconds: 5
+        maxBytes: 1024
+        onFinishedWith: function (text, code, tooLarge) {
+            root.noteOpener("/usr/bin/gio", code === 0);
+        }
+    }
+
+    Component.onCompleted: xdgScan.running = true
 
     function moveSelection(step) {
         if (rows.length === 0) {
@@ -280,6 +355,17 @@ Item {
                     }
 
                     // ── the list ──────────────────────────────────────────────
+
+                    Text {
+                        width: parent.width
+                        visible: root.openNote !== ""
+                        wrapMode: Text.WordWrap
+                        color: Color.urgent
+                        font.family: root.fontFamily
+                        font.pixelSize: Style.font.body
+                        textFormat: Text.PlainText
+                        text: root.openNote
+                    }
 
                     Text {
                         width: parent.width

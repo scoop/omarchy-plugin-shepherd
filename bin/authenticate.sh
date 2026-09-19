@@ -17,8 +17,22 @@ set -uo pipefail
 export LC_ALL=C
 
 readonly ID="scoop.shepherd"
-readonly HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+# Assigned before it is made readonly, so the command substitution's failure is
+# still visible: `readonly x="$(...)"` returns the status of `readonly`, not of
+# the subshell, so a cd that failed would leave HERE empty, freeze it that way,
+# and send every later call to "/token.sh".
+if ! HERE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd); then
+    printf '%s\n' "authenticate: cannot determine the plugin directory" >&2
+    exit 1
+fi
+readonly HERE
 readonly TOKEN_SH="$HERE/token.sh"
+
+if [[ ! -x "$TOKEN_SH" ]]; then
+    printf '%s\n' "authenticate: $TOKEN_SH is missing or not executable" >&2
+    exit 1
+fi
 
 say() { printf '%s\n' "$*"; }
 err() { printf '%s\n' "$*" >&2; }

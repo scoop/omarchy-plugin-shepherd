@@ -1,3 +1,9 @@
 bun run lint
 bun run typecheck
 bun test
+
+# CI runs this unconditionally; locally it runs when shellcheck is installed.
+# It caught a real SC2155 that the rest of the gate could not see.
+if command -v shellcheck >/dev/null 2>&1; then
+  shellcheck --severity=warning bin/*.sh scripts/*.sh
+fi
