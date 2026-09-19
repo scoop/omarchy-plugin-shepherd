@@ -37,9 +37,27 @@ Item {
 
     // ── what the Indicator and the Card read ──────────────────────────────────
 
-    /** One of: unconfigured, needs-token, degraded, unreachable, ok. */
-    readonly property string connection: _connection
-    property string _connection: "unconfigured"
+    /**
+     * One of: unconfigured, needs-token, degraded, unreachable, ok.
+     *
+     * A binding, not something recomputed by hand. It was the latter once, from
+     * onBaseUrlChanged, and that is a trap: a change handler can run before the
+     * bindings that depend on the same property have re-evaluated, so it read
+     * the parse of the *previous* address — for the first push, the empty one —
+     * concluded "unconfigured", and never looked again. Derived state that is
+     * declared cannot go stale that way.
+     */
+    readonly property string connection: Conn.stateFrom({
+        baseUrlValid: parsedUrl.ok,
+        permitted: addressUsable,
+        // Optimistic on purpose: only bin/poll.sh can answer this, since it is
+        // the only thing that touches the keyring, and it answers by exiting 2
+        // — which reads back as a refused credential and lands on needs-token.
+        // Assuming a token exists until a poll says otherwise is what keeps the
+        // first poll from flashing "sign in" at an operator who is signed in.
+        hasToken: true,
+        outcome: _outcome
+    })
 
     /** Rows for the card, already tiered, phrased and ordered. */
     property var rows: []
@@ -83,25 +101,24 @@ Item {
     property string _outcome: "never"
 
     /**
-     * Rebuild the connection state from everything currently known.
+     * Whether the address may be used, computed rather than read.
      *
-     * `hasToken` is optimistic on purpose: only bin/poll.sh can answer it, since
-     * it is the only thing that touches the keyring, and it answers by exiting
-     * 2 — which src/connection.js reads as a refused credential and turns into
-     * needs-token. Assuming a token exists until a poll says otherwise is what
-     * keeps a first poll from flashing "sign in" at an operator who is signed
-     * in perfectly well.
+     * `addressUsable` is the same question as a binding, and the bindings are
+     * what the Indicator and the Card read. But a change handler must not: it
+     * can run before the bindings that depend on the same inputs have
+     * re-evaluated, so `addressUsable` inside _restart() could still answer for
+     * the previous address. parsedUrl is safe there — onParsedUrlChanged fires
+     * after it holds its new value — so everything imperative derives from it
+     * directly, and only the declarative readers use the property.
      */
-    function _recomputeConnection() {
-        _connection = Conn.stateFrom({
-            baseUrlValid: parsedUrl.ok,
-            permitted: addressUsable,
-            hasToken: true,
-            outcome: _outcome,
-        });
+    function _usable() {
+        return parsedUrl.ok && Conn.permitted(parsedUrl, allowPlaintextFor);
     }
 
-    onBaseUrlChanged: _restart()
+    // parsedUrl rather than baseUrl: it re-evaluates for every address change,
+    // including one valid address to another, and by the time it has changed
+    // everything derived from it has changed too.
+    onParsedUrlChanged: _restart()
     onAllowPlaintextForChanged: _restart()
     onPollIntervalSecChanged: if (!demoMode)
         _schedule()
@@ -126,15 +143,14 @@ Item {
         _outcome = "never";
         lastOkAt = 0;
         unreachableSince = 0;
-        _recomputeConnection();
         pollTimer.stop();
-        if (addressUsable) {
+        if (_usable()) {
             poll();
         }
     }
 
     function _schedule() {
-        if (demoMode || !addressUsable) {
+        if (demoMode || !_usable()) {
             return;
         }
         pollTimer.interval = Conn.nextDelayMs(pollIntervalSec, _failures);
@@ -143,7 +159,7 @@ Item {
 
     /** Ask Shepherd, unless we are already asking. */
     function poll() {
-        if (demoMode || !addressUsable || poller.running) {
+        if (demoMode || !_usable() || poller.running) {
             return;
         }
         // The account the credential is filed under is the address itself, so
@@ -176,6 +192,10 @@ Item {
                 return;
             }
             if (code !== 0) {
+                // The exit code and nothing else: enough to tell a revoked
+                // token from a dead tailnet in a log, with nothing from
+                // Shepherd in it.
+                console.warn("scoop.shepherd: poll failed, exit " + code);
                 root._fail(Conn.outcomeFromExit(code));
                 return;
             }
@@ -209,7 +229,6 @@ Item {
         if (unreachableSince === 0) {
             unreachableSince = Date.now();
         }
-        _recomputeConnection();
         _schedule();
     }
 
@@ -225,7 +244,6 @@ Item {
         _failures = 0;
         lastOkAt = Date.now();
         unreachableSince = 0;
-        _recomputeConnection();
         _schedule();
     }
 
@@ -314,7 +332,7 @@ Item {
                 root._outcome = "ok";
                 root.lastOkAt = Date.now();
                 root.unreachableSince = 0;
-                root._connection = "ok";
+                root._outcome = "ok";
             } catch (e) {
                 // A broken fixture is a broken fixture; the live view is
                 // untouched because nothing above ran.
