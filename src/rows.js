@@ -22,6 +22,27 @@
 // has no module loader: the caller passes it in.
 
 /**
+ * Strip control characters and bound the length of text Shepherd relayed.
+ *
+ * A session name is an issue title, which is to say it is whatever somebody
+ * typed. src/holds.js has the same function for the same reason; QML's
+ * JavaScript engine has no module loader and neither file may import the
+ * other, so the duplication is the price of both loading as they are.
+ *
+ * @param {string} value
+ * @param {number} [maxLen]
+ */
+function clean(value, maxLen) {
+    var limit = typeof maxLen === "number" ? maxLen : 120;
+    if (typeof value !== "string") {
+        return "";
+    }
+    // eslint-disable-next-line no-control-regex
+    var stripped = value.replace(/[\u0000-\u001f\u007f]+/g, " ").trim();
+    return stripped.length > limit ? stripped.slice(0, limit - 1) + "…" : stripped;
+}
+
+/**
  * How long a hold has been in place, and whether that is a real measurement.
  *
  * Shepherd does not timestamp holds — HoldReason is a code and its parameters,
@@ -124,6 +145,11 @@ function makeRow(session, described, firstSeen, exact) {
     return {
         id: session.id,
         label: labelFor(session),
+        // The name as well as the label, not instead of it: the designation
+        // says which session, the name says what it is about, and a card
+        // carrying only the first makes you open Shepherd to find out whether
+        // a row is the one you care about.
+        name: nameOf(session),
         repo: repoNameOf(session.repoPath),
         tier: described.tier,
         code: described.code,
@@ -146,15 +172,31 @@ function makeRow(session, described, firstSeen, exact) {
  * @param {any} session
  */
 function labelFor(session) {
-    if (typeof session.desig === "string" && session.desig !== "") {
-        return session.desig;
+    var desig = clean(session.desig, 24);
+    if (desig !== "") {
+        return desig;
     }
-    if (typeof session.name === "string" && session.name !== "") {
-        return session.name;
+    var name = clean(session.name, 40);
+    if (name !== "") {
+        return name;
     }
     var repo = repoNameOf(session.repoPath);
     var short = String(session.id).slice(0, 6);
     return repo ? repo + " · " + short : short;
+}
+
+/**
+ * What the session is about.
+ *
+ * Empty when it would only repeat the label: a session with no designation is
+ * already labelled by its name, and printing it twice spends a line saying
+ * nothing.
+ *
+ * @param {any} session
+ */
+function nameOf(session) {
+    var name = clean(session.name, 120);
+    return name === labelFor(session) ? "" : name;
 }
 
 /** @param {string} repoPath */
@@ -257,6 +299,8 @@ if (typeof module !== "undefined") {
     module.exports = {
         build: build,
         labelFor: labelFor,
+        nameOf: nameOf,
+        clean: clean,
         repoNameOf: repoNameOf,
         compareRows: compareRows,
         shortAge: shortAge,

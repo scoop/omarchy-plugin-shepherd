@@ -265,6 +265,62 @@ describe("ordering", () => {
     });
 });
 
+describe("what a session is about", () => {
+    test("is carried alongside the designation, not instead of it", () => {
+        const out = buildAt(
+            { sessions: [session({})], holds: { s1: { code: "ci-red" } } },
+            emptySeen(),
+            T0,
+        );
+        expect(out.rows[0].label).toBe("TASK-1");
+        expect(out.rows[0].name).toBe("a session");
+    });
+
+    test("is empty when it would only repeat the label", () => {
+        // No designation, so the name is already the label. Printing it twice
+        // spends a line saying nothing.
+        const out = buildAt(
+            { sessions: [session({ desig: "" })], holds: { s1: { code: "ci-red" } } },
+            emptySeen(),
+            T0,
+        );
+        expect(out.rows[0].label).toBe("a session");
+        expect(out.rows[0].name).toBe("");
+    });
+
+    test("is stripped of control characters, being an issue title", () => {
+        const out = buildAt(
+            {
+                sessions: [session({ name: "drop the\u0000 legacy\u001b[31m column" })],
+                holds: { s1: { code: "ci-red" } },
+            },
+            emptySeen(),
+            T0,
+        );
+        expect(out.rows[0].name).toBe("drop the  legacy [31m column");
+        expect(out.rows[0].name).not.toContain("\u0000");
+    });
+
+    test("is bounded, so one long title cannot stretch the card", () => {
+        const out = buildAt(
+            { sessions: [session({ name: "x".repeat(400) })], holds: { s1: { code: "ci-red" } } },
+            emptySeen(),
+            T0,
+        );
+        expect(out.rows[0].name.length).toBe(120);
+        expect(out.rows[0].name.endsWith("\u2026")).toBe(true);
+    });
+
+    test("is empty when the session has none", () => {
+        const out = buildAt(
+            { sessions: [session({ name: "" })], holds: { s1: { code: "ci-red" } } },
+            emptySeen(),
+            T0,
+        );
+        expect(out.rows[0].name).toBe("");
+    });
+});
+
 describe("naming a row", () => {
     test("prefers the designation", () => {
         expect(labelFor(session({}))).toBe("TASK-1");

@@ -72,6 +72,8 @@ export interface Seen {
 export interface Row {
     id: string;
     label: string;
+    /** What the session is about; empty when it would repeat the label. */
+    name: string;
     repo: string;
     tier: Tier;
     code: string;
