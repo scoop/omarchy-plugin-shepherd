@@ -167,6 +167,12 @@ function outcomeFromExit(exitCode) {
     switch (exitCode) {
         case 0:
             return "ok";
+        // Nothing in the keyring for this address. Not a refusal by Shepherd,
+        // but it lands in the same place for the operator — a credential has to
+        // be supplied — and it must never read as "unreachable", which would
+        // tell them to check their network instead.
+        case 2:
+            return "unauthorized";
         case 3:
             return "unauthorized";
         case 4:

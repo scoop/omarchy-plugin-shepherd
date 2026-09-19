@@ -157,6 +157,7 @@ describe("our view of Shepherd", () => {
 describe("reading the helper's exit code", () => {
     test.each([
         [0, "ok"],
+        [2, "unauthorized"],
         [3, "unauthorized"],
         [4, "forbidden"],
         [5, "first-run"],
