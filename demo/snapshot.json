@@ -1,5 +1,5 @@
 {
-    "_comment": "Canned data for screenshots and for working on the card without three agents conveniently stuck. Loaded by `omarchy-shell scoop.shepherd.service demo`; `refresh` returns to the live view.",
+    "_comment": "Canned data for screenshots and for working on the card without three agents conveniently stuck. Includes a session in the group Shepherd calls \"Your turn\": open PR, green CI, agent handed off, and no hold of its own. Loaded by `omarchy-shell scoop.shepherd.service demo`; `refresh` returns to the live view.",
     "sessions": [
         {
             "id": "8f3adc99-1a2b-4c3d-9e8f-000000000001",
@@ -48,25 +48,59 @@
             "repoPath": "/home/you/Work/pitwall",
             "status": "running",
             "createdAt": 1758198000000
+        },
+        {
+            "id": "8f3adc99-1a2b-4c3d-9e8f-000000000007",
+            "desig": "TASK-433",
+            "name": "Teach the poller about roles.json",
+            "repoPath": "/home/you/Work/shepherd",
+            "status": "idle",
+            "createdAt": 1758176400000,
+            "readyToMerge": false,
+            "mergingSince": null
         }
     ],
     "holds": {
-        "8f3adc99-1a2b-4c3d-9e8f-000000000001": { "code": "blocked-yes-no" },
+        "8f3adc99-1a2b-4c3d-9e8f-000000000001": {
+            "code": "blocked-yes-no"
+        },
         "8f3adc99-1a2b-4c3d-9e8f-000000000002": {
             "code": "autopilot-paused",
             "params": {
                 "question": "The migration drops a column that still has readers. Proceed?"
             }
         },
-        "8f3adc99-1a2b-4c3d-9e8f-000000000003": { "code": "ready-merge", "params": { "pr": 412 } },
+        "8f3adc99-1a2b-4c3d-9e8f-000000000003": {
+            "code": "ready-merge",
+            "params": {
+                "pr": 412
+            }
+        },
         "8f3adc99-1a2b-4c3d-9e8f-000000000004": {
             "code": "critic-rework",
-            "params": { "findings": 3 }
+            "params": {
+                "findings": 3
+            }
         },
-        "8f3adc99-1a2b-4c3d-9e8f-000000000005": { "code": "ci-red", "params": { "pr": 419 } },
+        "8f3adc99-1a2b-4c3d-9e8f-000000000005": {
+            "code": "ci-red",
+            "params": {
+                "pr": 419
+            }
+        },
         "8f3adc99-1a2b-4c3d-9e8f-000000000006": {
             "code": "halted-usage",
-            "params": { "resetAt": 1758214800000 }
+            "params": {
+                "resetAt": 1758214800000
+            }
+        }
+    },
+    "git": {
+        "8f3adc99-1a2b-4c3d-9e8f-000000000007": {
+            "state": "open",
+            "checks": "success",
+            "isDraft": false,
+            "number": 2371
         }
     }
 }

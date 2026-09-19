@@ -13,6 +13,8 @@
 #     [ ... ]
 #     --holds--
 #     { ... }
+#     --git--
+#     { ... }
 #
 # The bearer token is never an argument and never an environment variable. It is
 # looked up from the login keyring here, inside the process that uses it, and
@@ -202,5 +204,13 @@ sessions="$body"
 
 get /api/holds yes
 [[ "${body:0:1}" == "{" ]] || die "holds did not answer with an object" 6
+holds="$body"
 
-printf '%s\n%s\n%s\n%s\n' "--sessions--" "$sessions" "--holds--" "$body"
+# Git state last. Shepherd does not record a hold for a session whose PR is
+# simply open, green and handed back to the operator — its only attention
+# signal is "in-flight", which has no hold code — so the holds map cannot see
+# the group Shepherd's own HUD calls "Your turn". The PR state can.
+get /api/git yes
+[[ "${body:0:1}" == "{" ]] || die "git did not answer with an object" 6
+
+printf '%s\n%s\n%s\n%s\n%s\n%s\n' "--sessions--" "$sessions" "--holds--" "$holds" "--git--" "$body"

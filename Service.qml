@@ -4,6 +4,7 @@ import Quickshell.Io
 import "src/holds.js" as Holds
 import "src/rows.js" as Rows
 import "src/connection.js" as Conn
+import "src/stages.js" as Stages
 
 // The one thing that talks to Shepherd, and the only place this plugin's state
 // lives.
@@ -239,7 +240,7 @@ Item {
             _fail("malformed");
             return;
         }
-        _apply(parsed.sessions, parsed.holds);
+        _apply(parsed.sessions, parsed.holds, parsed.git);
         _outcome = "ok";
         _failures = 0;
         lastOkAt = Date.now();
@@ -257,35 +258,44 @@ Item {
      */
     function _parseBodies(text) {
         var head = "--sessions--\n";
-        var mid = "\n--holds--\n";
+        var midHolds = "\n--holds--\n";
+        var midGit = "\n--git--\n";
         if (text.indexOf(head) !== 0) {
             return null;
         }
         var rest = text.slice(head.length);
-        var cut = rest.indexOf(mid);
-        if (cut < 0) {
+        var cutHolds = rest.indexOf(midHolds);
+        if (cutHolds < 0) {
+            return null;
+        }
+        var afterHolds = rest.slice(cutHolds + midHolds.length);
+        var cutGit = afterHolds.indexOf(midGit);
+        if (cutGit < 0) {
             return null;
         }
         try {
-            var sessions = JSON.parse(rest.slice(0, cut));
-            var holds = JSON.parse(rest.slice(cut + mid.length));
-            if (!Array.isArray(sessions) || !holds || typeof holds !== "object") {
+            var sessions = JSON.parse(rest.slice(0, cutHolds));
+            var holds = JSON.parse(afterHolds.slice(0, cutGit));
+            var git = JSON.parse(afterHolds.slice(cutGit + midGit.length));
+            if (!Array.isArray(sessions) || !holds || typeof holds !== "object" || !git || typeof git !== "object") {
                 return null;
             }
             return {
                 sessions: sessions,
-                holds: holds
+                holds: holds,
+                git: git
             };
         } catch (e) {
             return null;
         }
     }
 
-    function _apply(sessions, holds) {
+    function _apply(sessions, holds, git) {
         var built = Rows.build({
             sessions: sessions,
-            holds: holds
-        }, _seen, Date.now(), Holds.describe);
+            holds: holds,
+            git: git || {}
+        }, _seen, Date.now(), Holds.describe, Stages.isYourTurn);
         _seen = built.seen;
         rows = built.rows;
         counts = built.counts;
@@ -333,7 +343,7 @@ Item {
                 root.demoMode = true;
                 pollTimer.stop();
                 root._seen = Rows.emptySeen();
-                root._apply(fixture.sessions || [], fixture.holds || {});
+                root._apply(fixture.sessions || [], fixture.holds || {}, fixture.git || {});
                 root._outcome = "ok";
                 root.lastOkAt = Date.now();
                 root.unreachableSince = 0;

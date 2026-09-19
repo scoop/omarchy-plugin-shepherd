@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { build, labelFor, repoNameOf, shortAge, ageOf, emptySeen } from "../src/rows.js";
 import { describe as describeHold } from "../src/holds.js";
+import { isYourTurn } from "../src/stages.js";
 
 const T0 = 1758200000000;
 
@@ -18,7 +19,7 @@ function session(over) {
 }
 
 function buildAt(snapshot, previous, now) {
-    return build(snapshot, previous, now, describeHold);
+    return build(snapshot, previous, now, describeHold, isYourTurn);
 }
 
 describe("reconciling sessions against holds", () => {
@@ -262,6 +263,85 @@ describe("ordering", () => {
             T0,
         );
         expect(out.rows.map((r) => r.label)).toEqual(["TASK-1", "TASK-2"]);
+    });
+});
+
+describe("the group Shepherd calls Your turn", () => {
+    // Shepherd records no hold for a session whose PR is open, green and handed
+    // back: its only attention signal is "in-flight", which has no hold code. A
+    // card built from holds alone cannot see the group at all, which is the bug
+    // this exists to fix.
+    const open = { state: "open", checks: "success", isDraft: false, number: 412 };
+
+    test("is counted even though the session carries no hold", () => {
+        const out = buildAt(
+            { sessions: [session({ status: "idle" })], holds: {}, git: { s1: open } },
+            emptySeen(),
+            T0,
+        );
+        expect(out.rows).toHaveLength(1);
+        expect(out.rows[0].tier).toBe("needs-you");
+        expect(out.counts.needsYou).toBe(1);
+    });
+
+    test("says what to do, and which PR", () => {
+        const out = buildAt(
+            { sessions: [session({ status: "idle" })], holds: {}, git: { s1: open } },
+            emptySeen(),
+            T0,
+        );
+        expect(out.rows[0].phrase).toBe("ready to review and merge (#412)");
+    });
+
+    test("does not appear when the PR is not the operator's turn", () => {
+        const out = buildAt(
+            {
+                sessions: [session({ status: "idle" })],
+                holds: {},
+                git: { s1: { ...open, handoff: "merger" } },
+            },
+            emptySeen(),
+            T0,
+        );
+        expect(out.rows).toEqual([]);
+    });
+
+    test("yields to a real hold, which is more specific", () => {
+        const out = buildAt(
+            {
+                sessions: [session({ status: "idle" })],
+                holds: { s1: { code: "blocked-yes-no" } },
+                git: { s1: open },
+            },
+            emptySeen(),
+            T0,
+        );
+        expect(out.rows).toHaveLength(1);
+        expect(out.rows[0].phrase).toBe("waiting on a yes or no");
+    });
+
+    test("is absent without git state, rather than guessed at", () => {
+        const out = buildAt(
+            { sessions: [session({ status: "idle" })], holds: {} },
+            emptySeen(),
+            T0,
+        );
+        expect(out.rows).toEqual([]);
+    });
+
+    test("keeps a clock like any other row", () => {
+        const first = buildAt(
+            { sessions: [session({ status: "idle" })], holds: {}, git: {} },
+            emptySeen(),
+            T0,
+        );
+        const second = buildAt(
+            { sessions: [session({ status: "idle" })], holds: {}, git: { s1: open } },
+            first.seen,
+            T0 + 30000,
+        );
+        expect(second.rows[0].ageExact).toBe(true);
+        expect(second.rows[0].heldSince).toBe(T0 + 30000);
     });
 });
 

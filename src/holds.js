@@ -39,6 +39,11 @@ var TIERS = {
 
     // Work that is finished but will not land by itself.
     "ready-merge": "needs-you",
+    // Not one of Shepherd's hold codes. Shepherd records no hold for a session
+    // whose PR is open, green and handed back — its only signal is "in-flight",
+    // which has none — so src/stages.js derives this one from the PR state
+    // instead. Shepherd's own HUD calls the group "Your turn".
+    "your-turn": "needs-you",
     "manual-steps": "needs-you",
     "recap-attention": "needs-you",
     // awaiting-merge: Shepherd has handed the PR off to a merger, and the
@@ -87,6 +92,7 @@ var PHRASES = {
     "train-error": "merge train failed",
 
     "ready-merge": "ready to merge",
+    "your-turn": "ready to review and merge",
     "manual-steps": "manual steps to do",
     "recap-attention": "recap needs a look",
 
@@ -191,6 +197,8 @@ function phraseFor(hold, makeDate) {
             return typeof p.rebaseCount === "number" && p.rebaseCount > 1
                 ? base + " (attempt " + p.rebaseCount + ")"
                 : base;
+        case "your-turn":
+            return typeof p.pr === "number" && p.pr > 0 ? base + " (#" + p.pr + ")" : base;
         case "manual-steps":
             return typeof p.steps === "number" && p.steps > 0
                 ? p.steps + " manual step" + (p.steps === 1 ? "" : "s") + " to do"

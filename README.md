@@ -21,6 +21,14 @@ and this plugin sorts those codes into three tiers by who has to move next:
 | **Being worked**       | `plan-rework` `critic-rework` `ci-red` `pr-conflict` `merging` `merge-rebasing` `stalled`                                                                                                                                  | the card only                      |
 | **Waiting on a reset** | `halted-usage` `quota-rework` `quota-review` `quota-error` `quota-plan`                                                                                                                                                    | the card only, with the reset time |
 
+One row comes from somewhere other than a hold. A session whose pull request is
+open, CI is green and the agent has handed off carries **no hold at all** —
+Shepherd's only attention signal for it is "in-flight", which has no hold code —
+so a card built from holds alone cannot see the group Shepherd's own HUD labels
+**Your turn**. That group is derived here from the pull request state instead,
+mirroring the predicate in Shepherd's `herd-partition.ts`, and it counts as
+needing you: it is finished work waiting for a click.
+
 A hold code this plugin has not been taught is shown in **Being worked** with
 its raw code, never counted and never dropped: Shepherd ships faster than this
 plugin does, and a new code should not be able to raise a false alarm or to hide
@@ -118,6 +126,7 @@ Every request this plugin makes, in full:
 | `GET <address>/api/health`   | no            | liveness, once per poll, before anything else — it is how "you are off the network" is told apart from "your token was refused" |
 | `GET <address>/api/sessions` | yes           | the live sessions                                                                                                               |
 | `GET <address>/api/holds`    | yes           | why each one is held                                                                                                            |
+| `GET <address>/api/git`      | yes           | each one's pull request state — the only way to see the group Shepherd calls "Your turn"                                        |
 
 Nothing else. No `POST`, no `PUT`, no `DELETE`, no WebSocket, and no request to
 any host other than the address you configured. `bin/token.sh` additionally

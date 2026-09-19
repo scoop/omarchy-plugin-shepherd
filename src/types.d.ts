@@ -46,12 +46,31 @@ export interface Session {
     repoPath?: string;
     status?: string;
     createdAt?: number;
+    /** Operator-flagged "ready to merge"; Shepherd renders it as its own group. */
+    readyToMerge?: boolean;
+    /** Stamped while a merge train is carrying this session. */
+    mergingSince?: number | null;
 }
+
+/** The fields of a Shepherd GitState this plugin reads. */
+export interface GitState {
+    state?: "none" | "open" | "merged" | "closed";
+    checks?: "none" | "pending" | "success" | "failure";
+    isDraft?: boolean;
+    noCi?: boolean;
+    handoff?: "reviewer" | "merger";
+    number?: number;
+}
+
+/** A lifecycle stage, mirrored from Shepherd's herd partition. */
+export type Stage =
+    "your-turn" | "draft-awaiting-signoff" | "waiting-on-reviewer" | "waiting-on-merger";
 
 /** What one poll returned. */
 export interface Snapshot {
     sessions: Session[];
     holds: Record<string, Hold>;
+    git?: Record<string, GitState>;
 }
 
 /** One hold as this plugin has been watching it. */

@@ -64,9 +64,10 @@ function clean(value, maxLen) {
  * @param {(hold: import("./types").Hold) => import("./types").Described} describe
  * @returns {import("./types").Built}
  */
-function build(snapshot, previous, now, describe) {
+function build(snapshot, previous, now, describe, isYourTurn) {
     var sessions = (snapshot && snapshot.sessions) || [];
     var holds = (snapshot && snapshot.holds) || {};
+    var git = (snapshot && snapshot.git) || {};
     var prevSessions = (previous && previous.sessions) || {};
     var prevHolds = (previous && previous.holds) || {};
 
@@ -83,9 +84,31 @@ function build(snapshot, previous, now, describe) {
         seen.sessions[s.id] = true;
 
         var hold = Object.prototype.hasOwnProperty.call(holds, s.id) ? holds[s.id] : null;
-        if (!hold || typeof hold.code !== "string" || hold.code === "") {
-            // No hold entry, but Shepherd calls it blocked: show it, quietly.
-            if (s.status === "blocked") {
+        // Assigned on every path that reaches the push below; the branches that
+        // do not assign them all continue.
+        var described;
+        var code;
+
+        if (hold && typeof hold.code === "string" && hold.code !== "") {
+            described = describe(hold);
+            code = described.code;
+        } else {
+            // A session whose pull request is open, green and handed back to
+            // the operator carries no hold at all: its only attention signal is
+            // "in-flight", and in-flight has no hold code. Shepherd's own HUD
+            // calls that group "Your turn", and a card built from holds alone
+            // cannot see it. The PR state can.
+            var g = Object.prototype.hasOwnProperty.call(git, s.id) ? git[s.id] : null;
+            if (isYourTurn && isYourTurn(s, g, now)) {
+                described = describe({
+                    code: "your-turn",
+                    params: g && g.number ? { pr: g.number } : undefined,
+                });
+                code = "your-turn";
+            } else if (s.status === "blocked") {
+                // Shepherd calls it blocked but recorded no reason. Show it,
+                // quietly: without a code we cannot tell "waiting on you" from
+                // "waiting on a quota reset".
                 rows.push(
                     makeRow(
                         s,
@@ -100,25 +123,15 @@ function build(snapshot, previous, now, describe) {
                         false,
                     ),
                 );
+                continue;
+            } else {
+                continue;
             }
-            continue;
         }
 
-        var d = describe(hold);
-        var prior = Object.prototype.hasOwnProperty.call(prevHolds, s.id) ? prevHolds[s.id] : null;
-        var firstSeen;
-        var exact;
-        if (prior && prior.code === d.code) {
-            // Same hold as last time: keep its clock and its honesty about it.
-            firstSeen = prior.firstSeen;
-            exact = prior.exact === true;
-        } else {
-            firstSeen = now;
-            // We watched this change only if we had already seen the session.
-            exact = Object.prototype.hasOwnProperty.call(prevSessions, s.id);
-        }
-        seen.holds[s.id] = { code: d.code, firstSeen: firstSeen, exact: exact };
-        rows.push(makeRow(s, d, firstSeen, exact));
+        var t = clockFor(prevHolds, prevSessions, s.id, code, now);
+        seen.holds[s.id] = { code: code, firstSeen: t.firstSeen, exact: t.exact };
+        rows.push(makeRow(s, described, t.firstSeen, t.exact));
     }
 
     rows.sort(compareRows);
@@ -131,6 +144,29 @@ function build(snapshot, previous, now, describe) {
             working: countTier(rows, "working"),
             waiting: countTier(rows, "waiting"),
         },
+    };
+}
+
+/**
+ * How long this session has carried this code, and whether that is a real
+ * measurement rather than the moment we first looked.
+ *
+ * @param {Record<string, any>} prevHolds
+ * @param {Record<string, true>} prevSessions
+ * @param {string} id
+ * @param {string} code
+ * @param {number} now epoch ms
+ */
+function clockFor(prevHolds, prevSessions, id, code, now) {
+    var prior = Object.prototype.hasOwnProperty.call(prevHolds, id) ? prevHolds[id] : null;
+    if (prior && prior.code === code) {
+        // Same as last time: keep its clock and its honesty about it.
+        return { firstSeen: prior.firstSeen, exact: prior.exact === true };
+    }
+    return {
+        firstSeen: now,
+        // We watched this change only if we had already seen the session.
+        exact: Object.prototype.hasOwnProperty.call(prevSessions, id),
     };
 }
 
@@ -298,6 +334,7 @@ function emptySeen() {
 if (typeof module !== "undefined") {
     module.exports = {
         build: build,
+        clockFor: clockFor,
         labelFor: labelFor,
         nameOf: nameOf,
         clean: clean,

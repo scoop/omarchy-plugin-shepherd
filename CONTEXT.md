@@ -46,6 +46,16 @@ resets at a known time. Listed in the Card with that time, never counted,
 because the correct response is to do nothing.
 _Avoid_: Throttled, paused, quota, rate-limited, blocked
 
+**Your Turn**:
+Shepherd's own name for a session whose pull request is open, CI is green and
+the agent has handed off — finished work waiting for a click. Borrowed
+deliberately, and used only for that state: Shepherd's HUD groups it under
+exactly this label, and giving it a second name here would mean two words for
+one thing across two codebases. It is a lifecycle stage derived from the pull
+request, not a Hold — Shepherd records no hold for it at all — so it is the one
+row in the card that does not come from the holds map.
+_Avoid_: Awaiting merge, ready, mergeable, handed off
+
 **Held Since**:
 The moment this plugin first observed a Session's current Hold. Not a fact
 Shepherd reports — it is the age of our own observation, and it resets whenever

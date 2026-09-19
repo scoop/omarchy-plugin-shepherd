@@ -41,14 +41,20 @@ const SHEPHERD_CODES = [
     "manual-steps",
 ];
 
+// Not a Shepherd hold code: derived from PR state in src/stages.js, because
+// Shepherd records no hold for the group its own HUD calls "Your turn".
+const DERIVED_CODES = ["your-turn"];
+
 describe("the tier table", () => {
     test("covers every hold code Shepherd defines", () => {
         const missing = SHEPHERD_CODES.filter((c) => !isKnown(c));
         expect(missing).toEqual([]);
     });
 
-    test("defines nothing Shepherd does not", () => {
-        const extra = Object.keys(TIERS).filter((c) => !SHEPHERD_CODES.includes(c));
+    test("defines nothing Shepherd does not, beyond what we derive ourselves", () => {
+        const extra = Object.keys(TIERS).filter(
+            (c) => !SHEPHERD_CODES.includes(c) && !DERIVED_CODES.includes(c),
+        );
         expect(extra).toEqual([]);
     });
 
