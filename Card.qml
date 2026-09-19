@@ -112,15 +112,53 @@ Item {
     /** What the card says when a row could not be acted on. */
     property string openNote: ""
 
-    /** Open Shepherd's own view of one session, in the browser. */
+    /**
+     * What the last attempt to open a row did, for diagnose().
+     *
+     * Kept as state rather than only logged, because console.log lands at
+     * DEBUG and a shell started with a quieter log level drops it — which
+     * makes the one line that matters for debugging the one line that may not
+     * be there.
+     */
+    property string lastOpen: "none"
+
+    /**
+     * Open Shepherd's own view of one session, in the browser.
+     *
+     * The row must be one of ours. The host's `omarchy-shell shell call <id>
+     * <method> <arg>` reaches every public function on a loaded panel item, so
+     * without this check any process on the machine could hand in an object
+     * and make the shell launch a browser, with nobody present to agree to it.
+     * Looking the id up in the current model is what makes the argument a
+     * reference to something the operator can see rather than a value to act
+     * on.
+     */
     function openSession(row) {
-        if (!service || !service.parsedUrl || !service.parsedUrl.ok || !row) {
+        if (!row || typeof row.id !== "string") {
+            lastOpen = "not-a-row";
+            return;
+        }
+        var known = null;
+        for (var i = 0; i < rows.length; i++) {
+            if (rows[i].id === row.id) {
+                known = rows[i];
+                break;
+            }
+        }
+        if (!known) {
+            lastOpen = "unknown-row";
+            return;
+        }
+        row = known;
+        if (!service || !service.parsedUrl || !service.parsedUrl.ok) {
+            lastOpen = "no-address";
             return;
         }
         if (opener === "") {
             // Deliberately does not close: a card that vanishes having done
             // nothing is the failure an operator cannot debug.
             openNote = "Could not open it — no xdg-open or gio on this machine.";
+            lastOpen = "no-opener";
             return;
         }
         var url = service.parsedUrl.url + "/?session=" + encodeURIComponent(row.id);
@@ -136,8 +174,23 @@ Item {
         } else {
             Quickshell.execDetached([opener, "--", url]);
         }
+        lastOpen = "ran:" + opener;
         openNote = "";
         close();
+    }
+
+    /**
+     * One line about this machine, for when a click appears to do nothing.
+     *
+     *     omarchy-shell shell call scoop.shepherd diagnose
+     *
+     * Reachable with nobody present, so it answers with local facts only —
+     * which opener was found, whether the card is open, whether it has any
+     * rows at all, and what the last open attempt did. Nothing from Shepherd:
+     * no session, no repo, no count.
+     */
+    function diagnose(): string {
+        return "opener=" + (opener === "" ? "none" : opener) + " opened=" + opened + " hasRows=" + (rows.length > 0) + " lastOpen=" + lastOpen + " selected=" + selectedIndex;
     }
 
     /** Record what test -x said about one candidate. */
