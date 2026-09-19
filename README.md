@@ -176,13 +176,18 @@ bindd = SUPER, S, Shepherd, global, omarchy-shell shell toggle scoop.shepherd
 
 ## Development
 
+Fetch the dev dependencies with bun, then:
+
 ```bash
-bun install
-bun test        # the pure logic in src/, and the helper scripts in bin/
+bun test          # the pure logic in src/, and the helper scripts in bin/
 bun run lint
 bun run typecheck
 bun run validate  # runs Omarchy's validator against `git archive HEAD`
 ```
+
+Those dependencies are linters and a test runner, and they are needed only to
+work on the plugin. Installing it with `omarchy plugin add` neither runs nor
+needs them: nothing in the plugin installs, upgrades or removes software.
 
 `src/*.js` is plain JavaScript loaded byte-for-byte by both QML and `bun test`,
 typed by hand in `src/types.d.ts` — see
