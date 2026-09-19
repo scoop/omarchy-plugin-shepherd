@@ -151,7 +151,7 @@ Item {
             id: card
             // A card, not a takeover: this holds a short list of short lines,
             // and a full-screen surface for it would be mostly empty.
-            width: Math.min(Style.space(420), panel.width - Style.space(40))
+            width: Math.min(Style.space(460), panel.width - Style.space(40))
             height: Math.min(content.implicitHeight + Style.space(32), panel.height - Style.space(40))
             radius: Style.space(12)
             anchors.centerIn: parent
@@ -322,25 +322,42 @@ Item {
                                 radius: Style.space(6)
                                 color: root.selectedIndex === parent.index ? Color.menu.selectedBackground : "transparent"
 
-                                Row {
+                                Item {
                                     id: rowLine
                                     anchors.left: parent.left
                                     anchors.right: parent.right
                                     anchors.verticalCenter: parent.verticalCenter
                                     anchors.leftMargin: Style.space(8)
                                     anchors.rightMargin: Style.space(8)
-                                    spacing: Style.spacing.sm
+                                    implicitHeight: label.implicitHeight
 
+                                    // Anchored into two groups rather than laid
+                                    // out in a Row: the labels have to line up
+                                    // down the card so the eye can run past them
+                                    // to the phrases, and the repo has to sit on
+                                    // the right edge where it stays out of the
+                                    // way until it is wanted. A Row gives
+                                    // neither — it packs everything left at its
+                                    // natural width, so each line starts its
+                                    // phrase somewhere new.
                                     Text {
+                                        id: label
+                                        anchors.left: parent.left
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        width: Style.space(78)
                                         text: modelData.label
                                         color: modelData.tier === "needs-you" ? root.foreground : root.dim
                                         font.family: root.fontFamily
                                         font.pixelSize: Style.font.body
+                                        elide: Text.ElideRight
                                         textFormat: Text.PlainText
                                     }
 
                                     Text {
-                                        text: modelData.phrase
+                                        id: repo
+                                        anchors.right: parent.right
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: modelData.repo
                                         color: root.dim
                                         font.family: root.fontFamily
                                         font.pixelSize: Style.font.body
@@ -348,6 +365,10 @@ Item {
                                     }
 
                                     Text {
+                                        id: age
+                                        anchors.right: repo.left
+                                        anchors.rightMargin: text === "" ? 0 : Style.space(10)
+                                        anchors.verticalCenter: parent.verticalCenter
                                         text: root.ageOf(modelData)
                                         color: root.dim
                                         font.family: root.fontFamily
@@ -356,10 +377,16 @@ Item {
                                     }
 
                                     Text {
-                                        text: modelData.repo
+                                        anchors.left: label.right
+                                        anchors.leftMargin: Style.space(10)
+                                        anchors.right: age.left
+                                        anchors.rightMargin: Style.space(10)
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: modelData.phrase
                                         color: root.dim
                                         font.family: root.fontFamily
                                         font.pixelSize: Style.font.body
+                                        elide: Text.ElideRight
                                         textFormat: Text.PlainText
                                     }
                                 }

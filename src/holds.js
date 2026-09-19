@@ -99,11 +99,11 @@ var PHRASES = {
     "merge-rebasing": "rebasing onto its base",
     stalled: "not making progress",
 
-    "halted-usage": "usage limit reached",
-    "quota-rework": "rework quota reached",
-    "quota-review": "review quota reached",
-    "quota-error": "error quota reached",
-    "quota-plan": "plan quota reached",
+    "halted-usage": "usage limit",
+    "quota-rework": "rework quota",
+    "quota-review": "review quota",
+    "quota-error": "error quota",
+    "quota-plan": "plan quota",
 };
 
 /**

@@ -173,7 +173,7 @@ describe("phrases", () => {
             d.getMinutes = () => 5;
             return d;
         });
-        expect(phrase).toBe("usage limit reached, resets 14:05");
+        expect(phrase).toBe("usage limit, resets 14:05");
     });
 
     test("survive a hold with no parameters at all", () => {
