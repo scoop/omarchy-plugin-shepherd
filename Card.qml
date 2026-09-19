@@ -94,7 +94,9 @@ Item {
         }
         // argv, not a shell string: the id comes from Shepherd and the URL from
         // settings, and neither gets to be reinterpreted by a shell on the way.
-        Quickshell.execDetached(["/usr/bin/xdg-open", service.parsedUrl.url + "/?session=" + encodeURIComponent(row.id)]);
+        // "--" so a URL that somehow began with a dash is still a URL to
+        // xdg-open and not an option to it.
+        Quickshell.execDetached(["/usr/bin/xdg-open", "--", service.parsedUrl.url + "/?session=" + encodeURIComponent(row.id)]);
         close();
     }
 

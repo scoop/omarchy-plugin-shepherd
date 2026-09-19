@@ -93,17 +93,26 @@ read_token() {
 # is a token the bar will work with. A submit-scoped token answers /api/me and
 # then 403s on every poll — better to find that out now.
 verify() {
-    local token="$1" combined status
-    combined="$("$CURL" \
+    local token="$1" status
+    # -H @- reads a header LIST from stdin, and printf is a shell builtin, so
+    # the token reaches curl without ever being an argument to anything.
+    #
+    # Not --config: in a config file a quote or a newline inside the value is
+    # another directive, so a token containing one could add a second URL for
+    # curl to fetch with the Authorization header attached. -q first, so
+    # ~/.curlrc cannot do the same. No -L, so no redirect carries the token to
+    # a host nobody chose. --output /dev/null, so no body is ever collected.
+    status="$(printf 'Authorization: Bearer %s\n' "$token" | "$CURL" -q \
         --silent --show-error \
-        --config <(printf 'header = "Authorization: Bearer %s"\n' "$token") \
+        --header @- \
+        --proto '=http,https' \
+        --noproxy '*' \
         --connect-timeout "$CONNECT_TIMEOUT" \
         --max-time "$MAX_TIME" \
         --max-filesize 2000000 \
         --output /dev/null \
         --write-out '%{http_code}' \
         --url "${url}/api/holds" 2>/dev/null)" || return 7
-    status="$combined"
     case "$status" in
         200) return 0 ;;
         401) return 3 ;;

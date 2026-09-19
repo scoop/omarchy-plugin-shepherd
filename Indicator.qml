@@ -93,6 +93,28 @@ BarWidget {
     // to any process that can reach omarchy-shell, with nobody present to agree
     // to it.
 
+    /**
+     * Make a string safe for the bar's tooltip.
+     *
+     * The tooltip is rendered by the shell, not by this plugin, so there is no
+     * textFormat to pin: it is AutoText, and Qt renders anything that looks
+     * like markup as rich text — which loads <img src="..."> from wherever the
+     * string says. A session name is an issue title, so it is exactly the kind
+     * of string that decides that. src/rows.js already strips control
+     * characters; the angle brackets and ampersand have to go too, because
+     * only this side knows the value is about to cross into a sink it cannot
+     * configure.
+     */
+    function plain(value) {
+        if (typeof value !== "string") {
+            return "";
+        }
+        var out = value.replace(/[<>&]/g, " ");
+        // eslint-disable-next-line no-control-regex
+        out = out.replace(/[\u0000-\u001f\u007f]+/g, " ");
+        return out.length > 120 ? out.slice(0, 119) + "\u2026" : out;
+    }
+
     function tooltipText() {
         if (connection === "needs-token") {
             return "Shepherd — click to sign in";
@@ -120,7 +142,8 @@ BarWidget {
             return "Shepherd — " + head;
         }
         var age = service.ageOf(first);
-        var tail = first.label + ", " + first.phrase + (age !== "" ? " (" + age + ")" : "");
+        var name = plain(first.name);
+        var tail = plain(first.label) + (name !== "" ? " " + name : "") + ", " + plain(first.phrase) + (age !== "" ? " (" + age + ")" : "");
         return "Shepherd — " + head + "\noldest: " + tail;
     }
 

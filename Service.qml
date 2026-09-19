@@ -316,7 +316,12 @@ Item {
 
     BoundedProcess {
         id: demoReader
-        program: ["/usr/bin/cat", root._pluginDir + "demo/snapshot.json"]
+        // Through the bounded reader, not cat: the fixture lives in a
+        // directory anything running as this user can write to, so the name
+        // could be a symlink to somewhere else or a FIFO that never answers.
+        // The helper emits at most maxBytes + 1 so an overflow is detected
+        // here rather than truncated into something that parses.
+        program: [root._pluginDir + "bin/read-bounded.sh", "262144", root._pluginDir + "demo/snapshot.json"]
         deadlineSeconds: 5
         maxBytes: 262144
         onFinishedWith: function (text, code, tooLarge) {

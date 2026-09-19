@@ -39,7 +39,17 @@ if [[ -z "$url" ]]; then
 fi
 url="${url%/}"
 
-if [[ ! "$url" =~ ^https?://[A-Za-z0-9._:\[\]-]+$ ]]; then
+# Two alternatives rather than one character class, for the same reason as in
+# poll.sh and token.sh: a POSIX bracket expression does not treat a backslash
+# as an escape, so "[...\[\]-]" closes at the first unescaped "]" and rejects
+# every address anybody would actually type.
+is_bare_origin() {
+    [[ "$1" =~ ^https?://[A-Za-z0-9._-]+(:[0-9]{1,5})?$ ]] && return 0
+    [[ "$1" =~ ^https?://\[[0-9A-Fa-f:]+\](:[0-9]{1,5})?$ ]] && return 0
+    return 1
+}
+
+if ! is_bare_origin "$url"; then
     err "That is not a bare origin — scheme and host only, no path or query."
     exit 1
 fi
@@ -78,12 +88,16 @@ say
 say
 
 say "Checking it against $url ..."
+
+# One prompt, one call: token.sh store verifies the credential against the
+# instance before it writes anything, so there is nothing to gain from asking
+# twice and a second prompt is just a second chance to fat-finger it.
 rc=0
-printf '%s\n' "$token" | "$TOKEN_SH" verify "$url" || rc=$?
+printf '%s\n' "$token" | "$TOKEN_SH" store "$url" || rc=$?
 token=""
 
 case "$rc" in
-    0) say "Accepted." ;;
+    0) say "Accepted, and stored in the login keyring as '$ID' / '$url'." ;;
     2 | 3)
         err "Shepherd refused that token. If you revoked it, mint a new one."
         exit 1
@@ -99,7 +113,7 @@ case "$rc" in
         exit 1
         ;;
     6)
-        err "That did not look like an access token."
+        err "That did not look like an access token, or the keyring refused it."
         exit 1
         ;;
     *)
@@ -108,19 +122,6 @@ case "$rc" in
         exit 1
         ;;
 esac
-
-# Read again rather than holding it across the check: the verify above proved
-# the address and the credential go together, and this is the one that is kept.
-read -r -s -p "Confirm the token once more to store it: " token
-say
-rc=0
-printf '%s\n' "$token" | "$TOKEN_SH" store "$url" || rc=$?
-token=""
-if ((rc != 0)); then
-    err "Could not store the token (exit $rc)."
-    exit 1
-fi
-say "Stored in the login keyring, as '$ID' / '$url'."
 
 # ── the bar entry ─────────────────────────────────────────────────────────────
 

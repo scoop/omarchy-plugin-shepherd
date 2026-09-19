@@ -190,6 +190,59 @@ describe("poll.sh refuses bad input before it touches the keyring", () => {
     });
 });
 
+describe("read-bounded.sh", () => {
+    // The fixture lives in a directory anything running as this user can write
+    // to, so the name is not a promise about the file.
+    const READ_BOUNDED = resolve(BIN, "read-bounded.sh");
+    const tmp = resolve("/tmp", "shepherd-rb-" + process.pid);
+
+    beforeAll(async () => {
+        await Bun.write(tmp + "-real.txt", "hello");
+    });
+
+    test("reads a regular file", async () => {
+        const out = await run(READ_BOUNDED, ["100", tmp + "-real.txt"]);
+        expect(out.code).toBe(0);
+        expect(out.stdout).toBe("hello");
+    });
+
+    test("refuses a symlink rather than following it", async () => {
+        await Bun.spawn(["ln", "-sf", tmp + "-real.txt", tmp + "-link.txt"]).exited;
+        const out = await run(READ_BOUNDED, ["100", tmp + "-link.txt"]);
+        expect(out.code).toBe(1);
+        expect(out.stdout).toBe("");
+    });
+
+    test("does not block forever on a FIFO", async () => {
+        // A FIFO planted on the name would otherwise hang the one process on
+        // the desktop that must not be stoppable by a file.
+        await Bun.spawn(["mkfifo", tmp + "-fifo"]).exited;
+        const out = await run(READ_BOUNDED, ["100", tmp + "-fifo"]);
+        expect(out.stdout).toBe("");
+    });
+
+    test("emits one byte past the ceiling so overflow is detectable", async () => {
+        await Bun.write(tmp + "-big.bin", "x".repeat(300));
+        const out = await run(READ_BOUNDED, ["100", tmp + "-big.bin"]);
+        expect(out.stdout.length).toBe(101);
+    });
+
+    test.each([
+        ["no arguments", []],
+        ["a relative path", ["100", "demo/snapshot.json"]],
+        ["a non-numeric ceiling", ["lots", "/etc/hostname"]],
+        ["a zero ceiling", ["0", "/etc/hostname"]],
+    ])("refuses %s", async (_name, args) => {
+        expect((await run(READ_BOUNDED, args)).code).toBe(64);
+    });
+
+    afterAll(async () => {
+        for (const suffix of ["-real.txt", "-link.txt", "-fifo", "-big.bin"]) {
+            await Bun.spawn(["rm", "-f", tmp + suffix]).exited;
+        }
+    });
+});
+
 describe("supervise.sh", () => {
     const SUPERVISE = resolve(BIN, "supervise.sh");
 
