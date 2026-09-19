@@ -96,7 +96,21 @@ Item {
      * successful one look identical from here, which is how a click ends up
      * doing nothing with no way to find out why.
      */
+    /**
+     * Omarchy's own browser launcher, if the host told us where Omarchy is.
+     *
+     * Preferred over xdg-open because it is what Omarchy's first-party plugins
+     * use and it does two things xdg-open does not: it starts the browser in a
+     * proper session scope with systemd-run, and it focuses the window
+     * afterwards. A tab that opens on a workspace nobody is looking at is
+     * indistinguishable from the click having done nothing.
+     */
+    readonly property string omarchyOpener: omarchyPath !== "" ? omarchyPath + "/bin/omarchy-launch-browser" : ""
+
     readonly property string opener: {
+        if (omarchyOpener !== "" && openerFound[omarchyOpener] === true) {
+            return omarchyOpener;
+        }
         if (openerFound["/usr/bin/xdg-open"] === true) {
             return "/usr/bin/xdg-open";
         }
@@ -169,10 +183,18 @@ Item {
         // settings, and neither gets to be reinterpreted by a shell on the way.
         // "--" so a URL that somehow began with a dash stays a URL and does not
         // become an option. gio wants its verb first and takes no "--".
+        // No "--" anywhere. It belongs before a data argument as a rule, but
+        // xdg-open is a shell script whose own argument loop rejects any word
+        // beginning with a dash — "--" included — with "unexpected option", so
+        // passing it meant the URL was never opened at all. What makes leaving
+        // it out safe is the URL's shape rather than a separator:
+        // src/connection.js only ever yields an origin beginning http:// or
+        // https://, with the session id percent-encoded onto the end, so the
+        // argument cannot begin with a dash in the first place.
         if (opener === "/usr/bin/gio") {
             Quickshell.execDetached([opener, "open", url]);
         } else {
-            Quickshell.execDetached([opener, "--", url]);
+            Quickshell.execDetached([opener, url]);
         }
         lastOpen = "ran:" + opener;
         openNote = "";
@@ -190,7 +212,11 @@ Item {
      * no session, no repo, no count.
      */
     function diagnose(): string {
-        return "opener=" + (opener === "" ? "none" : opener) + " opened=" + opened + " hasRows=" + (rows.length > 0) + " lastOpen=" + lastOpen + " selected=" + selectedIndex;
+        var probed = [];
+        for (var k in openerFound) {
+            probed.push(k + "=" + openerFound[k]);
+        }
+        return "opener=" + (opener === "" ? "none" : opener) + " opened=" + opened + " hasRows=" + (rows.length > 0) + " lastOpen=" + lastOpen + " selected=" + selectedIndex + " omarchyPath=" + (omarchyPath === "" ? "(empty)" : omarchyPath) + " probed=[" + probed.join(" ") + "]";
     }
 
     /** Record what test -x said about one candidate. */
@@ -226,7 +252,43 @@ Item {
         }
     }
 
-    Component.onCompleted: xdgScan.running = true
+    /**
+     * The exact path the running probe is asking about.
+     *
+     * Captured when the probe starts rather than read back from omarchyOpener
+     * when it finishes. Binding `program` to omarchyOpener and starting the
+     * process on the same turn does not do that: the process launched with the
+     * value the binding held a moment ago — the empty one — while the callback
+     * read the new one, and filed "does not exist" against a path that does.
+     */
+    property string omarchyProbing: ""
+
+    BoundedProcess {
+        id: omarchyScan
+        deadlineSeconds: 5
+        maxBytes: 1024
+        onFinishedWith: function (text, code, tooLarge) {
+            root.noteOpener(root.omarchyProbing, code === 0);
+        }
+    }
+
+    function probeOmarchyOpener() {
+        if (omarchyOpener === "" || omarchyScan.running) {
+            return;
+        }
+        omarchyProbing = omarchyOpener;
+        omarchyScan.program = ["/usr/bin/test", "-x", omarchyProbing];
+        omarchyScan.running = true;
+    }
+
+    // The host injects omarchyPath with Qt.callLater, so it is still "" when
+    // this item completes and the preferred candidate would never be probed.
+    onOmarchyOpenerChanged: probeOmarchyOpener()
+
+    Component.onCompleted: {
+        xdgScan.running = true;
+        probeOmarchyOpener();
+    }
 
     function moveSelection(step) {
         if (rows.length === 0) {

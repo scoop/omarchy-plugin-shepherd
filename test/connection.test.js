@@ -48,6 +48,29 @@ describe("parsing an address", () => {
     });
 });
 
+describe("the URL handed to a browser launcher", () => {
+    // No "--" separator is used, because xdg-open rejects any word beginning
+    // with a dash including "--" itself. What makes that safe is that a
+    // parsed URL can never begin with one.
+    test.each([
+        "https://shepherd.example.ts.net",
+        "http://127.0.0.1:7330",
+        "  https://Shepherd.Example.COM/  ",
+    ])("%s yields an argument starting with a scheme", (raw) => {
+        const p = parseBaseUrl(raw);
+        expect(p.ok).toBe(true);
+        expect(p.url.startsWith("-")).toBe(false);
+        expect(/^https?:\/\//.test(p.url)).toBe(true);
+    });
+
+    test.each(["-oProxyCommand=evil", "--version", "-", "--"])(
+        "%s is refused outright, so it never becomes an argument",
+        (raw) => {
+            expect(parseBaseUrl(raw).ok).toBe(false);
+        },
+    );
+});
+
 describe("what counts as this machine", () => {
     test.each(["localhost", "127.0.0.1", "127.1.2.3", "::1", "[::1]", "LOCALHOST"])(
         "%s is loopback",

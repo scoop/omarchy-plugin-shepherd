@@ -42,7 +42,9 @@ something if it is never a number the plugin is not currently sure of.
 
 Clicking a row in the card opens Shepherd's own view of that session in your
 browser — `<address>/?session=<id>` — because a `read` token cannot approve,
-merge or steer anything, and a row that offered to would be lying.
+merge or steer anything, and a row that offered to would be lying. It opens
+through `omarchy-launch-browser` where that exists, which also brings the
+browser window to the front; otherwise through `xdg-open`, then `gio open`.
 
 ## Requirements
 
@@ -157,6 +159,17 @@ omarchy-shell scoop.shepherd.service refresh   # poll now, or leave demo mode
 omarchy-shell scoop.shepherd.service status    # our view of the connection
 omarchy-shell scoop.shepherd.service demo      # load demo/snapshot.json
 ```
+
+```bash
+omarchy-shell shell call scoop.shepherd diagnose ""   # why a click did nothing
+```
+
+`diagnose` is for when clicking a row appears to do nothing. It answers with
+facts about this machine only — which browser launcher was found, whether the
+card is open, whether it has any rows, and what the last open attempt did —
+and nothing from Shepherd: no session, no repo, no count. `lastOpen=ran:<path>`
+means the plugin handed the URL over successfully and anything still wrong is
+downstream of that.
 
 `status` answers with one of `unconfigured`, `needs-token`, `degraded`,
 `unreachable`, `ok` — this plugin's view of the connection, never anything about
