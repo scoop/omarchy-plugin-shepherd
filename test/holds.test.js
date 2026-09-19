@@ -79,6 +79,7 @@ describe("what counts as needing you", () => {
         "ready-merge",
         "manual-steps",
         "recap-attention",
+        "awaiting-merge",
     ])("%s stops until the operator acts", (code) => {
         expect(tierOf(code)).toBe("needs-you");
     });
@@ -90,7 +91,6 @@ describe("what counts as needing you", () => {
         "critic-rework",
         "ci-red",
         "pr-conflict",
-        "awaiting-merge",
         "merging",
         "merge-rebasing",
         "stalled",

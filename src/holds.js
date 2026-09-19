@@ -41,6 +41,11 @@ var TIERS = {
     "ready-merge": "needs-you",
     "manual-steps": "needs-you",
     "recap-attention": "needs-you",
+    // awaiting-merge: Shepherd has handed the PR off to a merger, and the
+    // merger is the operator. Its own rule in attention-core.ts says so —
+    // "operator's turn" — which is why this one sits here and not with the
+    // merge-train codes it superficially resembles.
+    "awaiting-merge": "needs-you",
 
     // Under way. An agent is addressing findings, or the merge train is moving.
     // With Auto-Address on, these close themselves out with nobody watching.
@@ -48,9 +53,14 @@ var TIERS = {
     "critic-rework": "working",
     "ci-red": "working",
     "pr-conflict": "working",
-    "awaiting-merge": "working",
     merging: "working",
     "merge-rebasing": "working",
+    // stalled never arrives. Shepherd defines the signal but nothing produces
+    // it — deriving the flag needs a transcript probe per running session, and
+    // the live hold service's zero-I/O rule forbids that. It is kept here for
+    // completeness and because the tier it would belong to is not obvious.
+    // A hung session still reaches the bar: the poller raises a stall-shaped
+    // block for it, which becomes blocked-stall, which needs you.
     stalled: "working",
 
     // A usage window has to reset. The time is in HoldParams.resetAt.
@@ -84,7 +94,7 @@ var PHRASES = {
     "critic-rework": "addressing review findings",
     "ci-red": "CI is red",
     "pr-conflict": "PR has conflicts",
-    "awaiting-merge": "waiting to merge",
+    "awaiting-merge": "handed to you to merge",
     merging: "landing on the base branch",
     "merge-rebasing": "rebasing onto its base",
     stalled: "not making progress",
