@@ -178,11 +178,22 @@ anything from Shepherd, changes anything on Shepherd, or writes anything down.
 three agents conveniently stuck; the card says "demo data" while it is loaded,
 and `refresh` returns to the live view.
 
-To open the card from the keyboard, add a binding of your own in
-`~/.config/hypr/bindings.conf`:
+To open the card from the keyboard, add a binding of your own to
+`~/.config/hypr/bindings.lua` — that is the file Omarchy 4 loads, via
+`require("hypr.bindings")` in `hyprland.lua`. A `bindings.conf` left over from
+an earlier Omarchy is no longer read:
 
+```lua
+o.bind("SUPER + Y", "Shepherd", "omarchy-shell shell toggle scoop.shepherd")
 ```
-bindd = SUPER, S, Shepherd, global, omarchy-shell shell toggle scoop.shepherd
+
+Then `omarchy-restart-shell`, or reload Hyprland. Pick a key that is free —
+`omarchy menu keybindings --print` lists what is taken. If you are replacing an
+Omarchy default, unbind it first:
+
+```lua
+hl.unbind("SUPER + Y")
+o.bind("SUPER + Y", "Shepherd", "omarchy-shell shell toggle scoop.shepherd")
 ```
 
 ## Development
