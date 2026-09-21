@@ -115,6 +115,25 @@ describe("your turn", () => {
         expect(isYourTurn(session({ mergingSince: NOW - 3600000 }), git({}), NOW)).toBe(true);
     });
 
+    test("is not, while a critic or plan reviewer is working the session", () => {
+        // The reviewer runs in its own agent, so the task session sits idle with
+        // a green PR — indistinguishable from your turn without this list.
+        const inReview = (id) => id === "s1";
+        expect(isYourTurn(session({}), git({}), NOW, inReview)).toBe(false);
+    });
+
+    test("is, for a session no reviewer is working", () => {
+        const inReview = (id) => id === "someone-else";
+        expect(isYourTurn(session({}), git({}), NOW, inReview)).toBe(true);
+    });
+
+    test("falls back to the old behaviour when the in-review list is not known", () => {
+        // An instance older than the read-scope change cannot answer, so a
+        // session under review shows a little early rather than not at all.
+        expect(isYourTurn(session({}), git({}), NOW)).toBe(true);
+        expect(isYourTurn(session({}), git({}), NOW, undefined)).toBe(true);
+    });
+
     test("survives a session or a git state that is not there", () => {
         expect(isYourTurn(null, git({}), NOW)).toBe(false);
         expect(isYourTurn(session({}), null, NOW)).toBe(false);

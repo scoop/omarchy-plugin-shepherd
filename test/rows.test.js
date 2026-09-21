@@ -329,6 +329,42 @@ describe("the group Shepherd calls Your turn", () => {
         expect(out.rows).toEqual([]);
     });
 
+    test("is left out while a reviewer is working the session", () => {
+        const out = buildAt(
+            {
+                sessions: [session({ status: "idle" })],
+                holds: {},
+                git: { s1: open },
+                inReview: ["s1"],
+            },
+            emptySeen(),
+            T0,
+        );
+        expect(out.rows).toEqual([]);
+        expect(out.counts.needsYou).toBe(0);
+    });
+
+    test("comes back as soon as the reviewer finishes", () => {
+        const during = buildAt(
+            {
+                sessions: [session({ status: "idle" })],
+                holds: {},
+                git: { s1: open },
+                inReview: ["s1"],
+            },
+            emptySeen(),
+            T0,
+        );
+        const after = buildAt(
+            { sessions: [session({ status: "idle" })], holds: {}, git: { s1: open }, inReview: [] },
+            during.seen,
+            T0 + 30000,
+        );
+        expect(after.counts.needsYou).toBe(1);
+        // We watched it become your turn, so its age is a real measurement.
+        expect(after.rows[0].ageExact).toBe(true);
+    });
+
     test("keeps a clock like any other row", () => {
         const first = buildAt(
             { sessions: [session({ status: "idle" })], holds: {}, git: {} },

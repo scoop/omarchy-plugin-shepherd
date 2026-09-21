@@ -78,13 +78,21 @@ function handoffStage(git) {
 /**
  * Whether this session is the operator's turn.
  *
- * Deliberately narrower than Shepherd's full partition. Shepherd also parks a
- * session while a critic run or a rework loop is in flight, and both of those
- * live behind /api/reviews and /api/plan-gates, which a read-scoped token
- * cannot reach. A session whose critic is mid-run therefore shows here a little
- * early rather than not at all. The alternatives were worse: asking every user
- * of this plugin for a token that can also merge their pull requests, or
- * leaving the group out entirely — which is the bug this file exists to fix.
+ * Shepherd parks a session in two stages before it can reach "Your turn":
+ *
+ *   reviewer running  a critic or plan reviewer is in flight. The reviewer runs
+ *                     in its own agent, so the task session sits idle with a
+ *                     green PR and would otherwise look exactly like your turn.
+ *                     `inReview` is that list, from /api/reviews/inflight and
+ *                     /api/plan-gates/inflight.
+ *   rework running    the agent is addressing requested changes. Shepherd only
+ *                     counts this for a session whose status is running (or
+ *                     blocked, shown as running), and greenIdle already
+ *                     excludes both — so it needs no check of its own here.
+ *
+ * `inReview` is empty against a Shepherd older than the release that put those
+ * two routes in the read scope. The card then shows a session under review as
+ * your turn a little early, which is how it behaved before they existed.
  *
  * Sessions the operator has flagged ready, and ones a merge train is carrying,
  * are excluded: Shepherd renders those as their own groups, and each already
@@ -93,9 +101,13 @@ function handoffStage(git) {
  * @param {import("./types").Session} session
  * @param {import("./types").GitState} git
  * @param {number} now epoch ms
+ * @param {(id: string) => boolean} [inReview]
  */
-function isYourTurn(session, git, now) {
+function isYourTurn(session, git, now, inReview) {
     if (!session || !git) {
+        return false;
+    }
+    if (inReview && inReview(session.id)) {
         return false;
     }
     if (session.readyToMerge === true) {

@@ -5,6 +5,7 @@ import "src/holds.js" as Holds
 import "src/rows.js" as Rows
 import "src/connection.js" as Conn
 import "src/stages.js" as Stages
+import "src/snapshot.js" as Snapshot
 
 // The one thing that talks to Shepherd, and the only place this plugin's state
 // lives.
@@ -240,7 +241,7 @@ Item {
             _fail("malformed");
             return;
         }
-        _apply(parsed.sessions, parsed.holds, parsed.git);
+        _apply(parsed.sessions, parsed.holds, parsed.git, parsed.inReview);
         _outcome = "ok";
         _failures = 0;
         lastOkAt = Date.now();
@@ -249,52 +250,20 @@ Item {
     }
 
     /**
-     * Split the helper's output into its two bodies.
-     *
-     * The markers are on lines of their own and the bodies are single-line JSON
-     * as Shepherd serialises it, so this is a split rather than a parse. A
-     * malformed answer returns null and is treated as no answer at all — a
-     * half-read snapshot would show a count derived from part of the herd.
+     * Split the helper's output into its bodies. The rules — which sections are
+     * required, which may be null, and what a malformed one means — live in
+     * src/snapshot.js, where they can be tested.
      */
     function _parseBodies(text) {
-        var head = "--sessions--\n";
-        var midHolds = "\n--holds--\n";
-        var midGit = "\n--git--\n";
-        if (text.indexOf(head) !== 0) {
-            return null;
-        }
-        var rest = text.slice(head.length);
-        var cutHolds = rest.indexOf(midHolds);
-        if (cutHolds < 0) {
-            return null;
-        }
-        var afterHolds = rest.slice(cutHolds + midHolds.length);
-        var cutGit = afterHolds.indexOf(midGit);
-        if (cutGit < 0) {
-            return null;
-        }
-        try {
-            var sessions = JSON.parse(rest.slice(0, cutHolds));
-            var holds = JSON.parse(afterHolds.slice(0, cutGit));
-            var git = JSON.parse(afterHolds.slice(cutGit + midGit.length));
-            if (!Array.isArray(sessions) || !holds || typeof holds !== "object" || !git || typeof git !== "object") {
-                return null;
-            }
-            return {
-                sessions: sessions,
-                holds: holds,
-                git: git
-            };
-        } catch (e) {
-            return null;
-        }
+        return Snapshot.parse(text);
     }
 
-    function _apply(sessions, holds, git) {
+    function _apply(sessions, holds, git, inReview) {
         var built = Rows.build({
             sessions: sessions,
             holds: holds,
-            git: git || {}
+            git: git || {},
+            inReview: inReview || []
         }, _seen, Date.now(), Holds.describe, Stages.isYourTurn);
         _seen = built.seen;
         rows = built.rows;
@@ -343,7 +312,7 @@ Item {
                 root.demoMode = true;
                 pollTimer.stop();
                 root._seen = Rows.emptySeen();
-                root._apply(fixture.sessions || [], fixture.holds || {}, fixture.git || {});
+                root._apply(fixture.sessions || [], fixture.holds || {}, fixture.git || {}, fixture.inReview || []);
                 root._outcome = "ok";
                 root.lastOkAt = Date.now();
                 root.unreachableSince = 0;

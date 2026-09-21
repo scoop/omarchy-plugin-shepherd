@@ -68,6 +68,15 @@ function build(snapshot, previous, now, describe, isYourTurn) {
     var sessions = (snapshot && snapshot.sessions) || [];
     var holds = (snapshot && snapshot.holds) || {};
     var git = (snapshot && snapshot.git) || {};
+    /** @type {Record<string, true>} */
+    var reviewing = {};
+    var inReviewList = (snapshot && snapshot.inReview) || [];
+    for (var r = 0; r < inReviewList.length; r++) {
+        reviewing[inReviewList[r]] = true;
+    }
+    var inReview = function (id) {
+        return Object.prototype.hasOwnProperty.call(reviewing, id);
+    };
     var prevSessions = (previous && previous.sessions) || {};
     var prevHolds = (previous && previous.holds) || {};
 
@@ -99,7 +108,7 @@ function build(snapshot, previous, now, describe, isYourTurn) {
             // calls that group "Your turn", and a card built from holds alone
             // cannot see it. The PR state can.
             var g = Object.prototype.hasOwnProperty.call(git, s.id) ? git[s.id] : null;
-            if (isYourTurn && isYourTurn(s, g, now)) {
+            if (isYourTurn && isYourTurn(s, g, now, inReview)) {
                 described = describe({
                     code: "your-turn",
                     params: g && g.number ? { pr: g.number } : undefined,

@@ -29,6 +29,15 @@ so a card built from holds alone cannot see the group Shepherd's own HUD labels
 mirroring the predicate in Shepherd's `herd-partition.ts`, and it counts as
 needing you: it is finished work waiting for a click.
 
+A session whose critic or plan reviewer is still running is not your turn yet —
+the reviewer works in its own agent, so the session itself sits idle with a
+green PR and would otherwise look exactly like one. The plugin asks Shepherd
+which sessions are under review (`/api/reviews/inflight`,
+`/api/plan-gates/inflight`) and leaves those out. Those two routes are in the
+`read` scope from the Shepherd release after 1.47.0. Against 1.47.0 or older they
+answer 403, which the plugin treats as "not known": it keeps working, and a
+session under review simply shows as your turn a little early.
+
 A hold code this plugin has not been taught is shown in **Being worked** with
 its raw code, never counted and never dropped: Shepherd ships faster than this
 plugin does, and a new code should not be able to raise a false alarm or to hide
@@ -121,12 +130,14 @@ at a different Shepherd withdraws it automatically.
 
 Every request this plugin makes, in full:
 
-| Request                      | Authenticated | Why                                                                                                                             |
-| ---------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `GET <address>/api/health`   | no            | liveness, once per poll, before anything else — it is how "you are off the network" is told apart from "your token was refused" |
-| `GET <address>/api/sessions` | yes           | the live sessions                                                                                                               |
-| `GET <address>/api/holds`    | yes           | why each one is held                                                                                                            |
-| `GET <address>/api/git`      | yes           | each one's pull request state — the only way to see the group Shepherd calls "Your turn"                                        |
+| Request                                 | Authenticated | Why                                                                                                                             |
+| --------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `GET <address>/api/health`              | no            | liveness, once per poll, before anything else — it is how "you are off the network" is told apart from "your token was refused" |
+| `GET <address>/api/sessions`            | yes           | the live sessions                                                                                                               |
+| `GET <address>/api/holds`               | yes           | why each one is held                                                                                                            |
+| `GET <address>/api/git`                 | yes           | each one's pull request state — the only way to see the group Shepherd calls "Your turn"                                        |
+| `GET <address>/api/reviews/inflight`    | yes           | which sessions a critic is reviewing right now — optional, see below                                                            |
+| `GET <address>/api/plan-gates/inflight` | yes           | which sessions a plan reviewer is reviewing right now — optional, see below                                                     |
 
 Nothing else. No `POST`, no `PUT`, no `DELETE`, no WebSocket, and no request to
 any host other than the address you configured. `bin/token.sh` additionally

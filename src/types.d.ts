@@ -71,6 +71,8 @@ export interface Snapshot {
     sessions: Session[];
     holds: Record<string, Hold>;
     git?: Record<string, GitState>;
+    /** Sessions with a critic or plan reviewer in flight; empty when not known. */
+    inReview?: string[];
 }
 
 /** One hold as this plugin has been watching it. */

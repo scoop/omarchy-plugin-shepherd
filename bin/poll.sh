@@ -15,6 +15,10 @@
 #     { ... }
 #     --git--
 #     { ... }
+#     --reviews-inflight--
+#     [ ... ] or null
+#     --plan-gates-inflight--
+#     [ ... ] or null
 #
 # The bearer token is never an argument and never an environment variable. It is
 # looked up from the login keyring here, inside the process that uses it, and
@@ -212,5 +216,34 @@ holds="$body"
 # the group Shepherd's own HUD calls "Your turn". The PR state can.
 get /api/git yes
 [[ "${body:0:1}" == "{" ]] || die "git did not answer with an object" 6
+git="$body"
 
-printf '%s\n%s\n%s\n%s\n%s\n%s\n' "--sessions--" "$sessions" "--holds--" "$holds" "--git--" "$body"
+# Which sessions have a critic or plan reviewer in flight. Shepherd parks those
+# as "reviewer running" rather than "your turn", and a reviewer runs in its own
+# agent while the task session sits idle with a green PR — so nothing in the
+# three bodies above can tell them apart.
+#
+# Optional, deliberately. These two routes joined the read scope after 1.47.0;
+# an instance older than that answers 403, and every other failure here is
+# equally no reason to throw away a snapshot that has already arrived. "null"
+# means "not known", and the card falls back to not excluding anyone rather
+# than to showing nothing.
+optional_list() {
+    local combined
+    combined="$(fetch "$1" yes)" || true
+    split "$combined"
+    if [[ "$status" == "200" && ${#body} -le $MAX_BYTES && "${body:0:1}" == "[" ]]; then
+        printf '%s' "$body"
+    else
+        printf 'null'
+    fi
+}
+reviews_inflight="$(optional_list /api/reviews/inflight)"
+plan_gates_inflight="$(optional_list /api/plan-gates/inflight)"
+
+printf '%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n%s\n' \
+    "--sessions--" "$sessions" \
+    "--holds--" "$holds" \
+    "--git--" "$git" \
+    "--reviews-inflight--" "$reviews_inflight" \
+    "--plan-gates-inflight--" "$plan_gates_inflight"
