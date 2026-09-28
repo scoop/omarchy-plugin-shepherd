@@ -34,6 +34,8 @@ export interface Described {
     code: string;
     tier: Tier;
     known: boolean;
+    /** Read as no hold at all; the session is judged by its lifecycle. */
+    ignored: boolean;
     phrase: string;
     question: string;
 }

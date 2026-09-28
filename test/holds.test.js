@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
     TIERS,
     PHRASES,
+    IGNORED,
     tierOf,
     isKnown,
     phraseFor,
@@ -51,6 +52,11 @@ describe("the tier table", () => {
         expect(missing).toEqual([]);
     });
 
+    test("tiers nothing it ignores", () => {
+        const both = Object.keys(IGNORED).filter((c) => Object.keys(TIERS).includes(c));
+        expect(both).toEqual([]);
+    });
+
     test("defines nothing Shepherd does not, beyond what we derive ourselves", () => {
         const extra = Object.keys(TIERS).filter(
             (c) => !SHEPHERD_CODES.includes(c) && !DERIVED_CODES.includes(c),
@@ -84,7 +90,6 @@ describe("what counts as needing you", () => {
         "train-error",
         "ready-merge",
         "manual-steps",
-        "recap-attention",
         "awaiting-merge",
     ])("%s stops until the operator acts", (code) => {
         expect(tierOf(code)).toBe("needs-you");
@@ -111,6 +116,22 @@ describe("what counts as needing you", () => {
             expect(tierOf(code)).toBe("waiting");
         },
     );
+});
+
+describe("a hold this plugin ignores", () => {
+    // Shepherd's own UI calls recap-attention an advisory nudge, not a proven
+    // operator block: it is the recap model's verdict, not a stop.
+    test("recap-attention is known but ignored", () => {
+        const d = describeHold({ code: "recap-attention" });
+        expect(d.known).toBe(true);
+        expect(d.ignored).toBe(true);
+        expect(d.tier).not.toBe("needs-you");
+    });
+
+    test("a real hold is not ignored", () => {
+        expect(describeHold({ code: "blocked-yes-no" }).ignored).toBe(false);
+        expect(describeHold({ code: "some-future-code" }).ignored).toBe(false);
+    });
 });
 
 describe("a hold code this plugin has never heard of", () => {

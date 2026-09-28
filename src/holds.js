@@ -45,7 +45,6 @@ var TIERS = {
     // instead. Shepherd's own HUD calls the group "Your turn".
     "your-turn": "needs-you",
     "manual-steps": "needs-you",
-    "recap-attention": "needs-you",
     // awaiting-merge: Shepherd has handed the PR off to a merger, and the
     // merger is the operator. Its own rule in attention-core.ts says so —
     // "operator's turn" — which is why this one sits here and not with the
@@ -76,6 +75,19 @@ var TIERS = {
     "quota-plan": "waiting",
 };
 
+// Codes that are read as no hold at all, so the session is judged by its
+// lifecycle instead — Your turn if its PR is green and idle, otherwise not
+// shown.
+//
+// recap-attention is the recap model's verdict "needs_attention", not a stop.
+// Shepherd's own UI calls it "an advisory nudge, not a proven operator block"
+// (HOLD_AWAITS_OPERATOR in ui/src/lib/hold.ts), and it would otherwise take the
+// place of the Your turn row for a finished session.
+/** @type {Record<string, true>} */
+var IGNORED = {
+    "recap-attention": true,
+};
+
 // Written in the second person wherever the operator is the one who has to
 // move, so a row reads as an instruction rather than as a status.
 /** @type {Record<string, string>} */
@@ -94,7 +106,6 @@ var PHRASES = {
     "ready-merge": "ready to merge",
     "your-turn": "ready to review and merge",
     "manual-steps": "manual steps to do",
-    "recap-attention": "recap needs a look",
 
     "plan-rework": "reworking the plan",
     "critic-rework": "addressing review findings",
@@ -132,7 +143,12 @@ function tierOf(code) {
 
 /** @param {string} code */
 function isKnown(code) {
-    return Object.prototype.hasOwnProperty.call(TIERS, code);
+    return Object.prototype.hasOwnProperty.call(TIERS, code) || isIgnored(code);
+}
+
+/** @param {string} code */
+function isIgnored(code) {
+    return Object.prototype.hasOwnProperty.call(IGNORED, code);
 }
 
 /**
@@ -181,7 +197,7 @@ function phraseFor(hold, makeDate) {
     if (!hold || typeof hold.code !== "string") {
         return "held";
     }
-    if (!isKnown(hold.code)) {
+    if (!Object.prototype.hasOwnProperty.call(PHRASES, hold.code)) {
         return "held (" + clean(hold.code, 60) + ")";
     }
     var base = PHRASES[hold.code];
@@ -233,6 +249,7 @@ function describe(hold, makeDate) {
         code: code,
         tier: tierOf(code),
         known: isKnown(code),
+        ignored: isIgnored(code),
         phrase: phraseFor(hold, makeDate),
         question:
             hold && hold.params && typeof hold.params.question === "string"
@@ -245,6 +262,7 @@ if (typeof module !== "undefined") {
     module.exports = {
         TIERS: TIERS,
         PHRASES: PHRASES,
+        IGNORED: IGNORED,
         tierOf: tierOf,
         isKnown: isKnown,
         phraseFor: phraseFor,
