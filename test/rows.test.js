@@ -320,6 +320,48 @@ describe("the group Shepherd calls Your turn", () => {
         expect(out.rows[0].phrase).toBe("waiting on a yes or no");
     });
 
+    test("is not hidden by a recap-attention hold", () => {
+        const out = buildAt(
+            {
+                sessions: [session({ status: "idle" })],
+                holds: { s1: { code: "recap-attention" } },
+                git: { s1: open },
+            },
+            emptySeen(),
+            T0,
+        );
+        expect(out.rows).toHaveLength(1);
+        expect(out.rows[0].code).toBe("your-turn");
+    });
+
+    test("a recap-attention hold alone shows nothing", () => {
+        const out = buildAt(
+            {
+                sessions: [session({ status: "done" })],
+                holds: { s1: { code: "recap-attention" } },
+                git: { s1: { ...open, handoff: "merger" } },
+            },
+            emptySeen(),
+            T0,
+        );
+        expect(out.rows).toEqual([]);
+        expect(out.counts.needsYou).toBe(0);
+    });
+
+    test("a recap-attention hold on a blocked session shows it quietly", () => {
+        const out = buildAt(
+            {
+                sessions: [session({ status: "blocked" })],
+                holds: { s1: { code: "recap-attention" } },
+            },
+            emptySeen(),
+            T0,
+        );
+        expect(out.rows).toHaveLength(1);
+        expect(out.rows[0].tier).toBe("working");
+        expect(out.rows[0].phrase).toBe("blocked");
+    });
+
     test("is absent without git state, rather than guessed at", () => {
         const out = buildAt(
             { sessions: [session({ status: "idle" })], holds: {} },

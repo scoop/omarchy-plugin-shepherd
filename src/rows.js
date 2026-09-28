@@ -98,8 +98,13 @@ function build(snapshot, previous, now, describe, isYourTurn) {
         var described;
         var code;
 
-        if (hold && typeof hold.code === "string" && hold.code !== "") {
-            described = describe(hold);
+        // An ignored hold, such as the recap model's advisory
+        // recap-attention, is read as no hold at all.
+        var held =
+            hold && typeof hold.code === "string" && hold.code !== "" ? describe(hold) : null;
+
+        if (held && !held.ignored) {
+            described = held;
             code = described.code;
         } else {
             // A session whose pull request is open, green and handed back to
@@ -125,6 +130,7 @@ function build(snapshot, previous, now, describe, isYourTurn) {
                             code: "",
                             tier: "working",
                             known: false,
+                            ignored: false,
                             phrase: "blocked",
                             question: "",
                         },

@@ -15,11 +15,11 @@ number on the bar.
 Shepherd records one hold code per session — the reason it is not progressing —
 and this plugin sorts those codes into three tiers by who has to move next:
 
-| Tier                   | Holds                                                                                                                                                                                                                      | Where it shows                     |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| **Needs you**          | `blocked-menu` `blocked-yes-no` `blocked-awaiting-input` `blocked-stall` `blocked-generic` `autopilot-paused` `plan-question` `halted-error` `train-error` `ready-merge` `awaiting-merge` `manual-steps` `recap-attention` | the count on the bar, and the card |
-| **Being worked**       | `plan-rework` `critic-rework` `ci-red` `pr-conflict` `merging` `merge-rebasing` `stalled`                                                                                                                                  | the card only                      |
-| **Waiting on a reset** | `halted-usage` `quota-rework` `quota-review` `quota-error` `quota-plan`                                                                                                                                                    | the card only, with the reset time |
+| Tier                   | Holds                                                                                                                                                                                                    | Where it shows                     |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| **Needs you**          | `blocked-menu` `blocked-yes-no` `blocked-awaiting-input` `blocked-stall` `blocked-generic` `autopilot-paused` `plan-question` `halted-error` `train-error` `ready-merge` `awaiting-merge` `manual-steps` | the count on the bar, and the card |
+| **Being worked**       | `plan-rework` `critic-rework` `ci-red` `pr-conflict` `merging` `merge-rebasing` `stalled`                                                                                                                | the card only                      |
+| **Waiting on a reset** | `halted-usage` `quota-rework` `quota-review` `quota-error` `quota-plan`                                                                                                                                  | the card only, with the reset time |
 
 One row comes from somewhere other than a hold. A session whose pull request is
 open, CI is green and the agent has handed off carries **no hold at all** —
@@ -37,6 +37,10 @@ which sessions are under review (`/api/reviews/inflight`,
 `read` scope from the Shepherd release after 1.47.0. Against 1.47.0 or older they
 answer 403, which the plugin treats as "not known": it keeps working, and a
 session under review simply shows as your turn a little early.
+
+`recap-attention` is ignored: it is the recap model's verdict, and Shepherd's
+own UI treats it as an advisory nudge rather than a stop. A session carrying it
+is judged as if it had no hold, so it can still show as your turn.
 
 A hold code this plugin has not been taught is shown in **Being worked** with
 its raw code, never counted and never dropped: Shepherd ships faster than this
