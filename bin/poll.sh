@@ -5,7 +5,7 @@
 #
 # Reads one line of JSON on stdin:
 #
-#     {"url":"https://shepherd.example.ts.net","account":"<same url>"}
+#     {"url":"https://shepherd.example.ts.net","account":"<same url>","plaintextConsent":"<allowPlaintextFor>"}
 #
 # and writes, on success, two bodies separated by marker lines:
 #
@@ -77,6 +77,27 @@ is_bare_origin() {
     return 1
 }
 
+# Hosts that never leave the machine; the same list as src/connection.js.
+is_loopback() {
+    [[ "$1" =~ ^(localhost|::1|\[::1\]|127\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})$ ]]
+}
+
+# https, loopback http, or http to exactly the address consent was given for.
+plaintext_permitted() {
+    local url="$1" consent="$2" hostport host
+    [[ "$url" == http://* ]] || return 0
+    hostport="${url#http://}"
+    if [[ "$hostport" == \[* ]]; then
+        host="${hostport%%]*}]"
+    else
+        host="${hostport%%:*}"
+    fi
+    is_loopback "${host,,}" && return 0
+    consent="${consent#"${consent%%[![:space:]]*}"}"
+    consent="${consent%"${consent##*[![:space:]]}"}"
+    [[ "${consent,,}" == "${url,,}" ]]
+}
+
 # `read` reports failure at end of input even when it read a full line, so the
 # variable is what is checked, not the status: a caller that does not end its
 # line with a newline is still a caller that said something.
@@ -91,6 +112,7 @@ read -r config || true
 # it is filed under.
 url="$(expr "$config" : '.*"url"[[:space:]]*:[[:space:]]*"\([^"]*\)"' || true)"
 account="$(expr "$config" : '.*"account"[[:space:]]*:[[:space:]]*"\([^"]*\)"' || true)"
+consent="$(expr "$config" : '.*"plaintextConsent"[[:space:]]*:[[:space:]]*"\([^"]*\)"' || true)"
 [[ -n "$url" ]] || die "no url" 64
 [[ -n "$account" ]] || die "no account" 64
 
@@ -99,8 +121,12 @@ account="$(expr "$config" : '.*"account"[[:space:]]*:[[:space:]]*"\([^"]*\)"' ||
 # the other's excuse.
 is_bare_origin "$url" || die "url is not a bare origin" 6
 [[ ${#url} -le 300 ]] || die "url too long" 6
+plaintext_permitted "$url" "$consent" ||
+    die "refusing plaintext http:// to $url without consent for exactly it" 6
 
-token="$("$SECRET_TOOL" lookup service "$ID" account "$account" 2>/dev/null)" || true
+# Capped: anything running as this user can write the entry, and the shape
+# check below refuses anything past 512 bytes anyway.
+token="$("$SECRET_TOOL" lookup service "$ID" account "$account" 2>/dev/null | "$HEAD" -c 1024)" || true
 [[ -n "$token" ]] || exit 2
 
 # The keyring is storage, not a promise about what is in it: an entry can be

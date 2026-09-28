@@ -37,8 +37,10 @@ function clean(value, maxLen) {
     if (typeof value !== "string") {
         return "";
     }
-    // eslint-disable-next-line no-control-regex
-    var stripped = value.replace(/[\u0000-\u001f\u007f]+/g, " ").trim();
+    var stripped = value
+        // eslint-disable-next-line no-control-regex
+        .replace(/[\u0000-\u001f\u007f-\u009f\u200e\u200f\u202a-\u202e\u2066-\u2069]+/g, " ")
+        .trim();
     return stripped.length > limit ? stripped.slice(0, limit - 1) + "…" : stripped;
 }
 
@@ -68,8 +70,9 @@ function build(snapshot, previous, now, describe, isYourTurn) {
     var sessions = (snapshot && snapshot.sessions) || [];
     var holds = (snapshot && snapshot.holds) || {};
     var git = (snapshot && snapshot.git) || {};
+    // Keyed by ids Shepherd chose, so no prototype: "__proto__" is an id too.
     /** @type {Record<string, true>} */
-    var reviewing = {};
+    var reviewing = Object.create(null);
     var inReviewList = (snapshot && snapshot.inReview) || [];
     for (var r = 0; r < inReviewList.length; r++) {
         reviewing[inReviewList[r]] = true;
@@ -81,7 +84,7 @@ function build(snapshot, previous, now, describe, isYourTurn) {
     var prevHolds = (previous && previous.holds) || {};
 
     /** @type {import("./types").Seen} */
-    var seen = { sessions: {}, holds: {} };
+    var seen = emptySeen();
     /** @type {import("./types").Row[]} */
     var rows = [];
 
@@ -195,7 +198,7 @@ function makeRow(session, described, firstSeen, exact) {
         // carrying only the first makes you open Shepherd to find out whether
         // a row is the one you care about.
         name: nameOf(session),
-        repo: repoNameOf(session.repoPath),
+        repo: clean(repoNameOf(session.repoPath), 40),
         tier: described.tier,
         code: described.code,
         phrase: described.phrase,
@@ -337,7 +340,7 @@ function ageOf(row, now) {
  * @returns {import("./types").Seen}
  */
 function emptySeen() {
-    return { sessions: {}, holds: {} };
+    return { sessions: Object.create(null), holds: Object.create(null) };
 }
 
 if (typeof module !== "undefined") {

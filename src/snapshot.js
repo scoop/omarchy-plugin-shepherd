@@ -24,6 +24,12 @@ var MAX_ID_LENGTH = 128;
 /** A herd in the thousands is not a herd. Past this the list is refused. */
 var MAX_IN_FLIGHT = 5000;
 
+/**
+ * Past this the whole snapshot is refused rather than truncated: every session
+ * can become a row in the card, and a count built from part of the list lies.
+ */
+var MAX_SESSIONS = 1000;
+
 var MARKERS = [
     "--sessions--",
     "--holds--",
@@ -112,7 +118,7 @@ function parse(text) {
     } catch (e) {
         return null;
     }
-    if (!Array.isArray(sessions)) {
+    if (!Array.isArray(sessions) || sessions.length > MAX_SESSIONS) {
         return null;
     }
     if (!holds || typeof holds !== "object" || Array.isArray(holds)) {
@@ -124,7 +130,7 @@ function parse(text) {
 
     // The HUD's own test: a critic run OR a plan-gate run in flight parks the
     // session as "reviewer running". Either list alone is still worth using.
-    var seen = {};
+    var seen = Object.create(null);
     var inReview = [];
     var lists = [idList(bodies["--reviews-inflight--"]), idList(bodies["--plan-gates-inflight--"])];
     for (var l = 0; l < lists.length; l++) {

@@ -454,6 +454,8 @@ Item {
                             width: parent.width
                             visible: !(root.service && root.service.plaintextRefused)
                             password: true
+                            // The longest token bin/token.sh accepts.
+                            maximumLength: 512
                             placeholderText: "Access token"
                             onAccepted: root.storeToken()
                         }
@@ -664,7 +666,9 @@ Item {
 
     BoundedProcess {
         id: storeProc
-        program: [Qt.resolvedUrl("bin/token.sh").toString().replace("file://", ""), "store", root.service && root.service.parsedUrl ? root.service.parsedUrl.url : ""]
+        // The consent as the third argument: token.sh applies the plaintext
+        // rule itself. It is an address, not a secret, so argv is fine.
+        program: [Qt.resolvedUrl("bin/token.sh").toString().replace("file://", ""), "store", root.service && root.service.parsedUrl ? root.service.parsedUrl.url : "", root.service ? root.service.allowPlaintextFor : ""]
         deadlineSeconds: 25
         maxBytes: 8192
 

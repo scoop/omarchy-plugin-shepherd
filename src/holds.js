@@ -164,8 +164,10 @@ function clean(value, maxLen) {
     if (typeof value !== "string") {
         return "";
     }
-    // eslint-disable-next-line no-control-regex
-    var stripped = value.replace(/[\u0000-\u001f\u007f]+/g, " ").trim();
+    var stripped = value
+        // eslint-disable-next-line no-control-regex
+        .replace(/[\u0000-\u001f\u007f-\u009f\u200e\u200f\u202a-\u202e\u2066-\u2069]+/g, " ")
+        .trim();
     return stripped.length > limit ? stripped.slice(0, limit - 1) + "…" : stripped;
 }
 

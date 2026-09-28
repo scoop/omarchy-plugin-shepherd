@@ -135,6 +135,19 @@ omarchy bar set scoop.shepherd allowPlaintextFor 'http://192.168.1.10:7330'
 Consent is stored as the address rather than as a flag, so pointing the plugin
 at a different Shepherd withdraws it automatically.
 
+The helpers that send the token apply the same rule themselves rather than
+trusting the widget: `bin/poll.sh` is handed the consent alongside the address,
+and `bin/token.sh verify|store` take it as an optional last argument. Storing a
+token for a consented `http://` address by hand therefore names it twice:
+
+```bash
+printf '%s\n' 'YOUR_READ_TOKEN' | \
+  ~/.config/omarchy/plugins/scoop.shepherd/bin/token.sh store 'http://192.168.1.10:7330' 'http://192.168.1.10:7330'
+```
+
+`authenticate.sh` does not take plaintext consent; for such an address, grant it
+as above and then paste the token into the card or use `token.sh` directly.
+
 ## What it talks to, and what it writes
 
 Every request this plugin makes, in full:
@@ -167,7 +180,10 @@ came from.
 The token is never an argument to any process and never in an environment
 variable: `/proc/<pid>/cmdline` and `/proc/<pid>/environ` are readable by every
 process running as you. It is looked up from the keyring inside the helper that
-uses it and handed to `curl` on stdin, and the QML side never holds it at all.
+uses it and handed to `curl` on stdin, so polling never brings it into the shell.
+The one time the QML side holds a token is when you paste one into the card: it
+sits in the password field until you submit it, is written to `bin/token.sh` on
+stdin, and the field and the process's copy are cleared at that moment.
 
 ## Removing
 

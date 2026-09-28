@@ -97,6 +97,9 @@ Process {
             // Closed at once: the helper reads one line and a child that keeps
             // waiting on more is a child holding the deadline open.
             stdinEnabled = false;
+            // Dropped as soon as it is written: for token.sh store it is the
+            // pasted token, and nothing here needs it again.
+            stdinPayload = "";
         }
         _collected = "";
         stderrTail = "";

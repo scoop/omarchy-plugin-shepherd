@@ -2,10 +2,15 @@
 #
 # The credential, and the only place that touches it.
 #
-#     token.sh verify <url>    read a token on stdin, ask Shepherd whether it works
-#     token.sh store <url>     read a token on stdin, put it in the login keyring
-#     token.sh has <url>       exit 0 if a token is stored for this address
-#     token.sh forget <url>    remove it
+#     token.sh verify <url> [<consent>]   read a token on stdin, ask Shepherd whether it works
+#     token.sh store <url> [<consent>]    read a token on stdin, put it in the login keyring
+#     token.sh has <url>                  exit 0 if a token is stored for this address
+#     token.sh forget <url>               remove it
+#
+# <consent> is the allowPlaintextFor setting. verify and store send the token,
+# so they refuse http:// to anything but this machine unless it names exactly
+# <url> — the rule src/connection.js applies, checked again here because this
+# is the process that puts the token on the wire.
 #
 # The token arrives on stdin and leaves on stdin. It is never an argument to
 # anything: argv is world-readable through /proc for every process this user
@@ -30,7 +35,7 @@ readonly CONNECT_TIMEOUT=5
 readonly MAX_TIME=15
 
 usage() {
-    echo "usage: token.sh <verify|store|has|forget> <url>" >&2
+    echo "usage: token.sh <verify|store|has|forget> <url> [<plaintext-consent>]" >&2
     exit 64
 }
 
@@ -46,9 +51,31 @@ is_bare_origin() {
     return 1
 }
 
-(($# == 2)) || usage
+# Hosts that never leave the machine; the same list as src/connection.js.
+is_loopback() {
+    [[ "$1" =~ ^(localhost|::1|\[::1\]|127\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})$ ]]
+}
+
+# https, loopback http, or http to exactly the address consent was given for.
+plaintext_permitted() {
+    local url="$1" consent="$2" hostport host
+    [[ "$url" == http://* ]] || return 0
+    hostport="${url#http://}"
+    if [[ "$hostport" == \[* ]]; then
+        host="${hostport%%]*}]"
+    else
+        host="${hostport%%:*}"
+    fi
+    is_loopback "${host,,}" && return 0
+    consent="${consent#"${consent%%[![:space:]]*}"}"
+    consent="${consent%"${consent##*[![:space:]]}"}"
+    [[ "${consent,,}" == "${url,,}" ]]
+}
+
+(($# == 2 || $# == 3)) || usage
 action="$1"
 url="$2"
+consent="${3-}"
 
 is_bare_origin "$url" || {
     echo "token: url is not a bare origin" >&2
@@ -121,6 +148,15 @@ verify() {
         *) return 7 ;;
     esac
 }
+
+case "$action" in
+    verify | store)
+        plaintext_permitted "$url" "$consent" || {
+            echo "token: refusing to send a token over plaintext http:// to $url without consent for exactly it" >&2
+            exit 6
+        }
+        ;;
+esac
 
 case "$action" in
     verify)
