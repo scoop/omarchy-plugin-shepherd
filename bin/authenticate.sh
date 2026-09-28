@@ -79,7 +79,13 @@ if [[ "$scheme" == "http" ]] &&
     err "If that address really is safe to use unencrypted, grant consent for"
     err "exactly it and nothing else:"
     err
+    err "  omarchy bar set $ID baseUrl '$url'"
     err "  omarchy bar set $ID allowPlaintextFor '$url'"
+    err
+    err "then paste the token into the card, or store it with the consent given"
+    err "again as the last argument:"
+    err
+    err "  $TOKEN_SH store '$url' '$url'"
     err
     err "Changing the address later withdraws that consent by itself."
     exit 1

@@ -213,6 +213,11 @@ describe("cleaning relayed text", () => {
         expect(clean("a\u0000b\u001bc")).toBe("a b c");
     });
 
+    test("strips C1 and bidirectional controls", () => {
+        // U+202E flips what follows; U+009B is a one-byte CSI.
+        expect(clean("a\u202eb\u009bc\u2066d\u200fe")).toBe("a b c d e");
+    });
+
     test("bounds length and marks the truncation", () => {
         const out = clean("x".repeat(400), 20);
         expect(out.length).toBe(20);

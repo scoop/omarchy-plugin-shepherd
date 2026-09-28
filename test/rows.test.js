@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { build, labelFor, repoNameOf, shortAge, ageOf, emptySeen } from "../src/rows.js";
+import { build, clean, labelFor, repoNameOf, shortAge, ageOf, emptySeen } from "../src/rows.js";
 import { describe as describeHold } from "../src/holds.js";
 import { isYourTurn } from "../src/stages.js";
 
@@ -425,6 +425,42 @@ describe("what a session is about", () => {
         );
         expect(out.rows[0].name.length).toBe(120);
         expect(out.rows[0].name.endsWith("\u2026")).toBe(true);
+    });
+
+    test("strips C1 and bidirectional controls", () => {
+        expect(clean("a\u202eb\u009bc\u2066d\u200fe")).toBe("a b c d e");
+    });
+
+    test("the repo name is stripped and bounded like the rest", () => {
+        const out = buildAt(
+            {
+                sessions: [session({ repoPath: "/w/" + "r".repeat(100) + "\u202e" })],
+                holds: { s1: { code: "ci-red" } },
+            },
+            emptySeen(),
+            T0,
+        );
+        expect(out.rows[0].repo.length).toBe(40);
+        expect(out.rows[0].repo).not.toContain("\u202e");
+    });
+
+    test("a session called __proto__ is tracked like any other", () => {
+        // JSON.parse makes "__proto__" an own key; a plain {} map would take
+        // the assignment as a prototype change and silently drop it.
+        const s = session({ id: "__proto__", status: "idle" });
+        const git = JSON.parse(
+            '{"__proto__":{"state":"open","checks":"success","isDraft":false,"number":1}}',
+        );
+        const free = buildAt({ sessions: [s], holds: {}, git }, emptySeen(), T0);
+        expect(free.rows.map((r) => r.tier)).toEqual(["needs-you"]);
+        expect(Object.prototype.hasOwnProperty.call(free.seen.sessions, "__proto__")).toBe(true);
+
+        const reviewed = buildAt(
+            { sessions: [s], holds: {}, git, inReview: ["__proto__"] },
+            emptySeen(),
+            T0,
+        );
+        expect(reviewed.rows).toEqual([]);
     });
 
     test("is empty when the session has none", () => {

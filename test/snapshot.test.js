@@ -20,6 +20,12 @@ function output(over = {}) {
 }
 
 describe("a snapshot", () => {
+    test("is refused, not truncated, past 1000 sessions", () => {
+        const many = (n) => JSON.stringify(Array.from({ length: n }, (_, i) => ({ id: "s" + i })));
+        expect(parse(output({ "--sessions--": many(1000) }))).not.toBeNull();
+        expect(parse(output({ "--sessions--": many(1001) }))).toBeNull();
+    });
+
     test("parses when every section is present", () => {
         const out = parse(
             output({

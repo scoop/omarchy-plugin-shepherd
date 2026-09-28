@@ -146,6 +146,84 @@ describe("token.sh verify, against what Shepherd answers", () => {
     });
 });
 
+describe("token.sh sends plaintext only where src/connection.js would", () => {
+    // 0.0.0.0 reaches the loopback stand-in on Linux, but is not a loopback
+    // name, so it stands in for "http:// to another machine".
+    /** @type {string} */
+    let remote;
+    beforeAll(() => {
+        remote = "http://0.0.0.0:" + server.port;
+        answers["/api/holds"] = { status: 200, body: "{}" };
+    });
+
+    test.each(["verify", "store"])(
+        "%s refuses non-loopback http without consent",
+        async (action) => {
+            // Port 1, where nothing listens: should the check ever regress, store
+            // fails verification (7) instead of writing to the real keyring.
+            const out = await run(TOKEN_SH, [action, "http://0.0.0.0:1"], VALID_TOKEN);
+            expect(out.code).toBe(6);
+            expect(out.stderr).toContain("plaintext");
+        },
+    );
+
+    test("a consent for a different address is no consent", async () => {
+        const out = await run(TOKEN_SH, ["verify", remote, "http://0.0.0.0:1"], VALID_TOKEN);
+        expect(out.code).toBe(6);
+    });
+
+    test("consent for exactly this address lets it through", async () => {
+        const out = await run(
+            TOKEN_SH,
+            ["verify", remote, " " + remote.toUpperCase() + " "],
+            VALID_TOKEN,
+        );
+        expect(out.code).toBe(0);
+    });
+
+    test.each(["http://localhost:1", "http://127.0.0.2:1", "http://[::1]:1"])(
+        "%s needs no consent",
+        async (url) => {
+            // Unreachable, not refused: the consent check let it through.
+            expect((await run(TOKEN_SH, ["verify", url], VALID_TOKEN)).code).toBe(7);
+        },
+    );
+
+    test("too many arguments is a usage error", async () => {
+        expect((await run(TOKEN_SH, ["verify", origin, origin, "x"], VALID_TOKEN)).code).toBe(64);
+    });
+});
+
+describe("poll.sh sends plaintext only where src/connection.js would", () => {
+    const remote = "http://192.0.2.1:7330";
+    const account = remote + "/#no-such-account-" + Date.now();
+
+    test("non-loopback http without consent is refused before the keyring", async () => {
+        const out = await run(POLL_SH, [], JSON.stringify({ url: remote, account }));
+        expect(out.code).toBe(6);
+    });
+
+    test("a consent for a different address is no consent", async () => {
+        const out = await run(
+            POLL_SH,
+            [],
+            JSON.stringify({ url: remote, account, plaintextConsent: "http://192.0.2.2:7330" }),
+        );
+        expect(out.code).toBe(6);
+    });
+
+    test("consent for exactly this address reaches the keyring", async () => {
+        // Exit 2, "nothing stored": past the consent check, and nothing went
+        // on the wire, because the lookup comes first.
+        const out = await run(
+            POLL_SH,
+            [],
+            JSON.stringify({ url: remote, account, plaintextConsent: remote }),
+        );
+        expect(out.code).toBe(2);
+    });
+});
+
 describe("poll.sh refuses bad input before it touches the keyring", () => {
     test("no configuration on stdin is a usage error", async () => {
         expect((await run(POLL_SH, [], "")).code).toBe(64);

@@ -166,9 +166,14 @@ Item {
         }
         // The account the credential is filed under is the address itself, so
         // pointing the plugin somewhere else never reuses the old token.
+        // The consent goes along so that poll.sh, which sends the token,
+        // applies the plaintext rule itself rather than trusting this side.
+        // Longer than any valid address, it cannot match one, and it would
+        // push the line past poll.sh's size limit.
         poller.stdinPayload = JSON.stringify({
             url: parsedUrl.url,
             account: parsedUrl.url,
+            plaintextConsent: allowPlaintextFor.length <= 300 ? allowPlaintextFor : "",
         });
         poller.running = true;
     }

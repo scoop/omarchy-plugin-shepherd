@@ -111,7 +111,7 @@ BarWidget {
         }
         var out = value.replace(/[<>&]/g, " ");
         // eslint-disable-next-line no-control-regex
-        out = out.replace(/[\u0000-\u001f\u007f]+/g, " ");
+        out = out.replace(/[\u0000-\u001f\u007f-\u009f\u200e\u200f\u202a-\u202e\u2066-\u2069]+/g, " ");
         return out.length > 120 ? out.slice(0, 119) + "\u2026" : out;
     }
 
