@@ -63,6 +63,15 @@ merge or steer anything, and a row that offered to would be lying. It opens
 through `omarchy-launch-browser` where that exists, which also brings the
 browser window to the front; otherwise through `xdg-open`, then `gio open`.
 
+If Shepherd is installed as an app in Chromium, and that version of Shepherd
+handles `web+shepherd` links, a click instead hands
+`web+shepherd://session/<id>` to `xdg-open`. That focuses the app window you
+already have open and switches it to the session, rather than opening another
+tab. The plugin decides by asking `xdg-mime` whether anything handles
+`x-scheme-handler/web+shepherd`, and asks again every time the card opens.
+Whatever answers receives the session id, so this assumes one Shepherd app
+per machine.
+
 ## Requirements
 
 - Omarchy 4.0 or newer (the Quickshell-based bar).
