@@ -107,9 +107,10 @@ read -r config || true
 [[ ${#config} -le 1024 ]] || die "configuration too large" 64
 
 # Pulled out with a narrow pattern rather than a JSON parser: this runs before
-# anything is trusted, jq is one more dependency, and the only two values wanted
-# are a URL that has already been validated in src/connection.js and the account
-# it is filed under.
+# anything is trusted, jq is one more dependency, and the only three values
+# wanted are a URL that has already been validated in src/connection.js, the
+# account it is filed under, and the plaintext consent, which is optional and
+# only ever compared for equality with the URL.
 url="$(expr "$config" : '.*"url"[[:space:]]*:[[:space:]]*"\([^"]*\)"' || true)"
 account="$(expr "$config" : '.*"account"[[:space:]]*:[[:space:]]*"\([^"]*\)"' || true)"
 consent="$(expr "$config" : '.*"plaintextConsent"[[:space:]]*:[[:space:]]*"\([^"]*\)"' || true)"
