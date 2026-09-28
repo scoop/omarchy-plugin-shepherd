@@ -4,6 +4,7 @@ import Quickshell.Wayland
 import QtQuick
 import qs.Commons
 import qs.Ui
+import "src/links.js" as Links
 
 // The list behind the number.
 //
@@ -51,6 +52,7 @@ Item {
     function open(payloadJson) {
         opened = true;
         nowMs = Date.now();
+        probeAppHandler();
         selectedIndex = 0;
         Qt.callLater(function () {
             if (root.needsSetup) {
@@ -165,6 +167,16 @@ Item {
             console.warn("scoop.shepherd: no browser launcher found");
             return;
         }
+        if (appHandler && openerFound["/usr/bin/xdg-open"] === true) {
+            // The installed app's window, focused and routed, rather than a new
+            // tab. See src/links.js. The link is built from the id alone and
+            // always begins with the scheme, so it cannot pass for an option.
+            console.log("scoop.shepherd: opening in the installed Shepherd app");
+            Quickshell.execDetached(["/usr/bin/xdg-open", Links.appLink(row.id)]);
+            openNote = "";
+            close();
+            return;
+        }
         var url = service.parsedUrl.url + "/?session=" + encodeURIComponent(row.id);
         // Scheme and host only. The session id is not something to leave in a
         // log other processes can read.
@@ -256,9 +268,35 @@ Item {
     // this item completes and the preferred candidate would never be probed.
     onOmarchyOpenerChanged: probeOmarchyOpener()
 
+    /**
+     * Whether an installed Shepherd app claims web+shepherd links.
+     *
+     * Asked again every time the card opens, so installing the app while the
+     * shell runs is picked up on the next open. A click uses the last answer
+     * rather than waiting on a fresh one.
+     */
+    property bool appHandler: false
+
+    BoundedProcess {
+        id: appHandlerScan
+        program: ["/usr/bin/xdg-mime", "query", "default", "x-scheme-handler/" + Links.APP_SCHEME]
+        deadlineSeconds: 5
+        maxBytes: 1024
+        onFinishedWith: function (text, code, tooLarge) {
+            root.appHandler = !tooLarge && Links.hasAppHandler(text, code);
+        }
+    }
+
+    function probeAppHandler() {
+        if (!appHandlerScan.running) {
+            appHandlerScan.running = true;
+        }
+    }
+
     Component.onCompleted: {
         xdgScan.running = true;
         probeOmarchyOpener();
+        probeAppHandler();
     }
 
     function moveSelection(step) {
