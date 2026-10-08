@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 
 // The bar presence.
@@ -46,12 +47,12 @@ BarWidget {
     // disagree about how much of your attention this deserves.
     readonly property color tone: {
         if (counting) {
-            return Color.urgent;
+            return Commons.Color.urgent;
         }
         if (connection === "needs-token" || connection === "degraded") {
-            return Color.urgent;
+            return Commons.Color.urgent;
         }
-        return Color.muted;
+        return Commons.Color.muted;
     }
 
     readonly property string glyph: {

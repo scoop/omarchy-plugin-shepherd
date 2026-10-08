@@ -3,6 +3,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import QtQuick
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 import "src/links.js" as Links
 
@@ -33,8 +34,8 @@ Item {
     readonly property string connection: service ? service.connection : "unconfigured"
     readonly property bool needsSetup: connection === "needs-token" || connection === "degraded"
 
-    readonly property color foreground: Color.menu.text
-    readonly property color dim: Qt.darker(Color.menu.text, 1.4)
+    readonly property color foreground: Commons.Color.menu.text
+    readonly property color dim: Qt.darker(Commons.Color.menu.text, 1.4)
     readonly property string fontFamily: Style.font.menuFamily
 
     // Clock for the ages on the rows. A held session's age is the one thing in
@@ -340,7 +341,7 @@ Item {
 
         Rectangle {
             anchors.fill: parent
-            color: Color.menu.scrim
+            color: Commons.Color.menu.scrim
         }
 
         MouseArea {
@@ -356,8 +357,8 @@ Item {
             height: Math.min(content.implicitHeight + Style.space(32), panel.height - Style.space(40))
             radius: Style.space(12)
             anchors.centerIn: parent
-            color: Color.menu.background
-            borderSpec: Border.surfaceSpec("menu", "border", Color.menu.border, Math.max(1, Style.space(2)))
+            color: Commons.Color.menu.background
+            borderSpec: Border.surfaceSpec("menu", "border", Commons.Color.menu.border, Math.max(1, Style.space(2)))
 
             // Swallow clicks so they do not reach the dismiss area behind.
             MouseArea {
@@ -486,7 +487,7 @@ Item {
                         width: parent.width
                         visible: root.openNote !== ""
                         wrapMode: Text.WordWrap
-                        color: Color.urgent
+                        color: Commons.Color.urgent
                         font.family: root.fontFamily
                         font.pixelSize: Style.font.body
                         textFormat: Text.PlainText
@@ -534,7 +535,7 @@ Item {
                                 width: parent.width
                                 height: rowLine.implicitHeight + Style.space(12)
                                 radius: Style.space(6)
-                                color: root.selectedIndex === parent.index ? Color.menu.selectedBackground : "transparent"
+                                color: root.selectedIndex === parent.index ? Commons.Color.menu.selectedBackground : "transparent"
 
                                 Column {
                                     id: rowLine
