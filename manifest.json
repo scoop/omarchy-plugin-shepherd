@@ -6,7 +6,11 @@
     "author": "scoop",
     "description": "How many Shepherd sessions are waiting on you. The bar stays empty until one is.",
     "license": "MIT",
-    "kinds": ["service", "bar-widget", "overlay"],
+    "kinds": [
+        "service",
+        "bar-widget",
+        "overlay"
+    ],
     "keepLoaded": true,
     "entryPoints": {
         "service": "Service.qml",
