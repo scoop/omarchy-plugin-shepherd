@@ -2,7 +2,7 @@
     "schemaVersion": 1,
     "id": "scoop.shepherd",
     "name": "Shepherd",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "author": "scoop",
     "description": "How many Shepherd sessions are waiting on you. The bar stays empty until one is.",
     "license": "MIT",
